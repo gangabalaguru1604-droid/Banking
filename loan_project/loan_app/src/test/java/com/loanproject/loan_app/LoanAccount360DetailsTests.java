@@ -95,6 +95,9 @@ public class LoanAccount360DetailsTests {
     @Autowired
     private com.loanproject.loan_app.repository.PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private com.loanproject.loan_app.repository.LoanReminderLogRepository reminderLogRepository;
+
     private User customerMain;
     private User customerNorth;
     private Loan loanMain;
@@ -110,6 +113,7 @@ public class LoanAccount360DetailsTests {
     @BeforeEach
     void setUp() {
         auditRepo.deleteAll();
+        reminderLogRepository.deleteAll();
         paymentTransactionRepository.deleteAll();
         installmentRepository.deleteAll();
         collateralRepository.deleteAll();

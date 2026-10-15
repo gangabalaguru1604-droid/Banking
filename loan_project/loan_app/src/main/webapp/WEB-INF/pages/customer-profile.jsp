@@ -38,6 +38,16 @@
         </span>
     </div>
 
+    <!-- Contact Detail Update Required Notice -->
+    <c:if test="${profile.contactDetailUpdateRequired}">
+        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:12px 18px; border-radius:8px; margin-bottom:20px; font-size:14px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:18px;">⚠️</span>
+            <div>
+                <strong>Contact Detail Update Required:</strong> Customer communication delivery failed or email bounced. Please verify and update borrower email and mobile number during outreach.
+            </div>
+        </div>
+    </c:if>
+
     <!-- Customer Details & KYC Card -->
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:30px;">
         

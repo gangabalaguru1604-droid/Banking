@@ -137,6 +137,7 @@ public class LoanAccountDetailsService {
                     maskedEmail,
                     contactMethod
             );
+            profileDto.setContactDetailUpdateRequired(customer.isContactDetailUpdateRequired());
             dto.setCustomerProfileSection(SectionResult.success(profileDto));
         } catch (Exception e) {
             String cid = UUID.randomUUID().toString();

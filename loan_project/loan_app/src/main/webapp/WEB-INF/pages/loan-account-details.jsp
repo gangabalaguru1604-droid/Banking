@@ -90,6 +90,14 @@
             <c:choose>
                 <c:when test="${loanDetails.customerProfile.status == 'SUCCESS'}">
                     <c:set var="cust" value="${loanDetails.customerProfile.data}"/>
+                    <c:if test="${cust.contactDetailUpdateRequired}">
+                        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <span>⚠️</span>
+                            <div>
+                                <strong>Contact Detail Update Required:</strong> Customer communication bounced or email/mobile is invalid. Please request updated contact details during borrower outreach.
+                            </div>
+                        </div>
+                    </c:if>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; font-size:13px;">
                         <div>
                             <div style="color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase;">Customer Name</div>

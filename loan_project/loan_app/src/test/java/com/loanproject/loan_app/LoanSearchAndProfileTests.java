@@ -60,6 +60,24 @@ public class LoanSearchAndProfileTests {
     @Autowired
     private com.loanproject.loan_app.repository.PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private com.loanproject.loan_app.repository.LoanReminderLogRepository reminderLogRepository;
+
+    @Autowired
+    private com.loanproject.loan_app.repository.RepaymentInstallmentRepository installmentRepository;
+
+    @Autowired
+    private com.loanproject.loan_app.repository.PaymentTransactionRepository paymentTransactionRepository;
+
+    @Autowired
+    private com.loanproject.loan_app.repository.CollateralRepository collateralRepository;
+
+    @Autowired
+    private com.loanproject.loan_app.repository.GuarantorRepository guarantorRepository;
+
+    @Autowired
+    private com.loanproject.loan_app.repository.LinkedAccountRepository linkedAccountRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private User customerMain1;
@@ -80,6 +98,12 @@ public class LoanSearchAndProfileTests {
     @BeforeEach
     void setUp() {
         auditRepo.deleteAll();
+        reminderLogRepository.deleteAll();
+        paymentTransactionRepository.deleteAll();
+        installmentRepository.deleteAll();
+        collateralRepository.deleteAll();
+        guarantorRepository.deleteAll();
+        linkedAccountRepository.deleteAll();
         loanRepository.deleteAll();
         challengeRepository.deleteAll();
         passwordResetTokenRepository.deleteAll();

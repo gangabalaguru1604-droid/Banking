@@ -129,19 +129,12 @@
                                         </c:otherwise>
                                     </c:choose>
                                 </td>
-                                <td>
-                                    <div style="display:flex; gap:6px; align-items:center;">
-                                        <a href="/loan-details?loanId=${row.loanId}" 
-                                           class="btn" 
-                                           style="display:inline-block; text-decoration:none; text-align:center; padding:5px 9px; font-size:12px; width:auto; background:#4f46e5; color:#ffffff; font-weight:600; border-radius:4px;">
-                                            🎯 360° View
-                                        </a>
-                                        <a href="/customer-profile?loanId=${row.loanId}" 
-                                           class="btn" 
-                                           style="display:inline-block; text-decoration:none; text-align:center; padding:5px 9px; font-size:12px; width:auto; background:#2b6cb0; color:#ffffff; border-radius:4px;">
-                                            👤 Profile
-                                        </a>
-                                    </div>
+                                <td style="text-align:center;">
+                                    <a href="/loan-details?loanId=${row.loanId}" 
+                                       class="btn" 
+                                       style="display:inline-block; text-decoration:none; text-align:center; padding:6px 14px; font-size:12px; width:auto; background:#4f46e5; color:#ffffff; font-weight:600; border-radius:4px;">
+                                        Profile
+                                    </a>
                                 </td>
                             </tr>
                         </c:forEach>

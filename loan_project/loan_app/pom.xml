@@ -62,6 +62,12 @@
             <artifactId>jakarta.servlet.jsp.jstl</artifactId>
         </dependency>
 
+        <!-- Spring Mail Integration -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Application monitoring -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -58,6 +58,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**"))
             .authenticationProvider(authenticationProvider())
             .authorizeHttpRequests(auth -> auth
                 // Allow internal view forwarding and error dispatching for JSP views
@@ -74,6 +75,7 @@ public class SecurityConfig {
                     "/mfa-verify",
                     "/mfa-enroll",
                     "/session/keep-alive",
+                    "/api/webhooks/**",
                     "/css/**",
                     "/js/**",
                     "/images/**",

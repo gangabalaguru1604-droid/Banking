@@ -114,6 +114,8 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(30) DEFAULT 'VERIFIED'");
             jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS address VARCHAR(255) NULL");
             jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_contact_method VARCHAR(30) DEFAULT 'EMAIL'");
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS contact_detail_update_required BOOLEAN DEFAULT FALSE");
+            jdbcTemplate.execute("UPDATE users SET contact_detail_update_required = FALSE WHERE contact_detail_update_required IS NULL");
 
             // Ensure columns exist on PostgreSQL/H2 tables (loan)
             jdbcTemplate.execute("ALTER TABLE loan ADD COLUMN IF NOT EXISTS account_number VARCHAR(50) NULL");

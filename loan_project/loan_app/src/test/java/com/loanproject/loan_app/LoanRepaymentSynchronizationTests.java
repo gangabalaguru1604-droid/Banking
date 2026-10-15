@@ -96,6 +96,9 @@ public class LoanRepaymentSynchronizationTests {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private com.loanproject.loan_app.repository.LoanReminderLogRepository reminderLogRepository;
+
     private User borrower;
     private User officer;
     private Loan testLoan;
@@ -103,6 +106,7 @@ public class LoanRepaymentSynchronizationTests {
     @BeforeEach
     void setUp() {
         auditRepo.deleteAll();
+        reminderLogRepository.deleteAll();
         paymentTransactionRepository.deleteAll();
         installmentRepository.deleteAll();
         collateralRepository.deleteAll();

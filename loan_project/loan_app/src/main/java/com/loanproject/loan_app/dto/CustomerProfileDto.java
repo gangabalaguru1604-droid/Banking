@@ -16,6 +16,7 @@ public class CustomerProfileDto {
     private Long primaryLoanId;
     private String primaryAccountNumber;
     private List<LoanDetailDto> loans = new ArrayList<>();
+    private boolean contactDetailUpdateRequired;
 
     public CustomerProfileDto() {
     }
@@ -106,5 +107,13 @@ public class CustomerProfileDto {
 
     public void setLoans(List<LoanDetailDto> loans) {
         this.loans = loans;
+    }
+
+    public boolean isContactDetailUpdateRequired() {
+        return contactDetailUpdateRequired;
+    }
+
+    public void setContactDetailUpdateRequired(boolean contactDetailUpdateRequired) {
+        this.contactDetailUpdateRequired = contactDetailUpdateRequired;
     }
 }

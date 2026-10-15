@@ -78,6 +78,9 @@ public class User {
     @Column(length = 30)
     private String preferredContactMethod = "EMAIL";
 
+    @Column(name = "contact_detail_update_required", columnDefinition = "boolean default false")
+    private boolean contactDetailUpdateRequired = false;
+
     public User() {
     }
 
@@ -261,5 +264,13 @@ public class User {
 
     public void setPreferredContactMethod(String preferredContactMethod) {
         this.preferredContactMethod = preferredContactMethod;
+    }
+
+    public boolean isContactDetailUpdateRequired() {
+        return contactDetailUpdateRequired;
+    }
+
+    public void setContactDetailUpdateRequired(boolean contactDetailUpdateRequired) {
+        this.contactDetailUpdateRequired = contactDetailUpdateRequired;
     }
 }

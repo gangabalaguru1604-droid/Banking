@@ -12,6 +12,7 @@ public class CustomerProfileSectionDTO implements Serializable {
     private String maskedPhone;
     private String maskedEmail;
     private String preferredContactMethod;
+    private boolean contactDetailUpdateRequired;
 
     public CustomerProfileSectionDTO() {
     }
@@ -94,5 +95,13 @@ public class CustomerProfileSectionDTO implements Serializable {
 
     public void setPreferredContactMethod(String preferredContactMethod) {
         this.preferredContactMethod = preferredContactMethod;
+    }
+
+    public boolean isContactDetailUpdateRequired() {
+        return contactDetailUpdateRequired;
+    }
+
+    public void setContactDetailUpdateRequired(boolean contactDetailUpdateRequired) {
+        this.contactDetailUpdateRequired = contactDetailUpdateRequired;
     }
 }

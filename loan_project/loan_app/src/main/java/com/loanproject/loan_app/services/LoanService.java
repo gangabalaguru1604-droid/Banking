@@ -23,6 +23,9 @@ public class LoanService {
     @Autowired
     private RepaymentScheduleService repaymentScheduleService;
 
+    @Autowired(required = false)
+    private DpdReminderService dpdReminderService;
+
     public Loan apply(User user, double amount, double interest, int months) {
         double r = interest / (12 * 100);
 
@@ -45,7 +48,11 @@ public class LoanService {
 
         Loan saved = repo.save(l);
         if (saved.getAccountNumber() == null || saved.getAccountNumber().isBlank()) {
-            saved.setAccountNumber(String.format("LN%010d", Math.abs(saved.getLoanId())));
+            String accNum = String.format("LN%010d", Math.abs(saved.getLoanId()));
+            if (repo.findByAccountNumber(accNum).isPresent()) {
+                accNum = String.format("LN%08d%02d", Math.abs(saved.getLoanId()), (int) (Math.random() * 90 + 10));
+            }
+            saved.setAccountNumber(accNum);
             saved = repo.save(saved);
         }
         repaymentScheduleService.generateAndSaveAmortizationSchedule(saved);
@@ -130,6 +137,10 @@ public class LoanService {
 
         // Synchronize and persist repayment installments with confirmed payment
         repaymentScheduleService.synchronizeInstallmentsWithPayments(l, java.time.LocalDate.now(java.time.ZoneId.systemDefault()));
+
+        if (dpdReminderService != null) {
+            dpdReminderService.onPaymentConfirmed(l);
+        }
 
         return savedTxn;
     }

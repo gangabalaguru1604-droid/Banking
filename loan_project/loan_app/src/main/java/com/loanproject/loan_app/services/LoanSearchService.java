@@ -162,6 +162,7 @@ public class LoanSearchService {
         profile.setMaskedEmail(DataMaskingUtils.maskEmail(customer.getEmail()));
         profile.setMaskedPan(DataMaskingUtils.maskPan(customer.getPanNumber()));
         profile.setMaskedAadhaar(DataMaskingUtils.maskAadhaar(customer.getAadhaarNumber()));
+        profile.setContactDetailUpdateRequired(customer.isContactDetailUpdateRequired());
 
         List<LoanDetailDto> loanDtos = customerLoans.stream()
                 .map(this::mapToLoanDetailDto)

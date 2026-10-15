@@ -68,4 +68,21 @@ public final class DataMaskingUtils {
         }
         return username.charAt(0) + "***" + username.charAt(username.length() - 1) + domain;
     }
+
+    /**
+     * Masks a loan account number, e.g. LN0000000001 -> LN******0001.
+     */
+    public static String maskAccountNumber(String accountNumber) {
+        if (accountNumber == null || accountNumber.isBlank()) {
+            return "******";
+        }
+        String clean = accountNumber.trim();
+        if (clean.length() <= 4) {
+            return "******" + clean;
+        }
+        if (clean.startsWith("LN") && clean.length() > 6) {
+            return "LN******" + clean.substring(clean.length() - 4);
+        }
+        return clean.substring(0, 2) + "******" + clean.substring(clean.length() - 4);
+    }
 }

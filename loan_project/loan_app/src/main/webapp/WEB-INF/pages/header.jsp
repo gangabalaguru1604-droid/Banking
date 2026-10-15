@@ -372,6 +372,7 @@
                 <c:if test="${userObj.role == 'ROLE_ADMIN'}">
                     <a href="/admin/staff">Staff Management</a>
                     <a href="/admin/audit-logs">Audit Trail</a>
+                    <a href="/admin/reminders/demo" style="color:#d97706; font-weight:700;">🔔 DPD Reminders Demo</a>
                 </c:if>
 
                 <c:if test="${userObj.role == 'ROLE_CUSTOMER'}">
