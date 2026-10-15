@@ -16,4 +16,7 @@ WORKDIR /app
 
 COPY --from=build /app/target/*.war app.war
 
-CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.war"]
+# Render web service port
+EXPOSE 10000
+
+CMD ["sh", "-c", "java -Dserver.address=0.0.0.0 -Dserver.port=${PORT:-10000} -jar app.war"]
