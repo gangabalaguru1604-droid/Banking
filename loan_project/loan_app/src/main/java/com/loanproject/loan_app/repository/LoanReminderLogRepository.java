@@ -30,12 +30,12 @@ public interface LoanReminderLogRepository extends JpaRepository<LoanReminderLog
 
     List<LoanReminderLog> findByLoan_LoanIdOrderByCreatedAtDesc(Long loanId);
 
-    @Query("SELECT r FROM LoanReminderLog r WHERE r.loan = :loan AND r.installment = :installment AND r.dpdDay = :dpdDay AND r.status IN ('SENT', 'DELIVERED', 'OPENED')")
+    @Query("SELECT r FROM LoanReminderLog r WHERE r.loan = :loan AND r.installment = :installment AND r.dpdDay = :dpdDay AND r.status IN ('SENT', 'ACCEPTED', 'DELIVERED', 'OPENED')")
     List<LoanReminderLog> findSuccessfulReminders(
             @Param("loan") Loan loan,
             @Param("installment") RepaymentInstallment installment,
             @Param("dpdDay") int dpdDay);
 
-    @Query("SELECT r FROM LoanReminderLog r WHERE r.loan.id = :loanId AND r.status IN ('CLAIMED', 'SENT')")
+    @Query("SELECT r FROM LoanReminderLog r WHERE r.loan.id = :loanId AND r.status IN ('CLAIMED', 'SENT', 'ACCEPTED')")
     List<LoanReminderLog> findActiveRemindersByLoanId(@Param("loanId") Long loanId);
 }

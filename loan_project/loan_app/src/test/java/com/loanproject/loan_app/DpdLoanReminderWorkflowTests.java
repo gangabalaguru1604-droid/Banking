@@ -298,7 +298,7 @@ public class DpdLoanReminderWorkflowTests {
         List<LoanReminderLog> logs = reminderLogRepository.findAll();
         assertEquals(1, logs.size());
         assertEquals("SMS", logs.get(0).getChannel());
-        assertEquals("SENT", logs.get(0).getStatus());
+        assertTrue("ACCEPTED".equalsIgnoreCase(logs.get(0).getStatus()) || "SENT".equalsIgnoreCase(logs.get(0).getStatus()));
     }
 
     @Test
@@ -568,5 +568,122 @@ public class DpdLoanReminderWorkflowTests {
         RepaymentInstallment updatedInst = installmentRepository.findById(inst.getId()).orElseThrow();
         assertEquals("PAID", updatedInst.getStatus());
         assertEquals(new BigDecimal("4442.44"), updatedInst.getPaidAmount());
+    }
+
+    @Test
+    @DisplayName("15. SMTP connection failure triggers SMS fallback WITHOUT setting contactDetailUpdateRequired")
+    public void testSmtpConnectionFailureDoesNotCorruptContactDetailUpdateRequired() {
+        // Mock email provider to fail with ConnectException (e.g. Render outbound SMTP port blocked)
+        when(emailReminderProvider.sendReminderEmail(any()))
+                .thenReturn(ReminderSendResult.failure("java.net.ConnectException: Connection refused (port 587 blocked)", true));
+
+        LocalDate businessDate = LocalDate.of(2026, 10, 15);
+        LocalDate dueDate = businessDate.minusDays(1);
+        RepaymentInstallment inst = createInstallment(1, dueDate, new BigDecimal("4442.44"), BigDecimal.ZERO, "DUE");
+
+        scheduler.runDailyReminderJob(businessDate);
+
+        // Verify email was attempted with retries
+        verify(emailReminderProvider, atLeastOnce()).sendReminderEmail(any());
+        // Verify SMS fallback was automatically dispatched
+        verify(smsReminderProvider, times(1)).sendReminderSms(any());
+
+        // Verify customer contact detail update flag is NOT set (transient network failure must not flag customer)
+        User cust = userRepository.findById(testCustomer.getId()).orElseThrow();
+        assertFalse(cust.isContactDetailUpdateRequired(), "Transient SMTP failure must not flag customer contactDetailUpdateRequired");
+
+        // Verify reminder logs: 1 EMAIL (FAILED), 1 SMS (ACCEPTED or SENT)
+        List<LoanReminderLog> logs = reminderLogRepository.findAll();
+        assertEquals(2, logs.size());
+
+        LoanReminderLog emailLog = logs.stream().filter(l -> "EMAIL".equalsIgnoreCase(l.getChannel())).findFirst().orElseThrow();
+        assertEquals("FAILED", emailLog.getStatus());
+        assertFalse(emailLog.isContactDetailUpdateRequired());
+
+        LoanReminderLog smsLog = logs.stream().filter(l -> "SMS".equalsIgnoreCase(l.getChannel())).findFirst().orElseThrow();
+        assertTrue("ACCEPTED".equalsIgnoreCase(smsLog.getStatus()) || "SENT".equalsIgnoreCase(smsLog.getStatus()));
+    }
+
+    @Test
+    @DisplayName("16. Repeated scheduler execution does not duplicate sends for the same installment and business date")
+    public void testRepeatedSchedulerExecutionDoesNotDuplicateSends() {
+        LocalDate businessDate = LocalDate.of(2026, 10, 15);
+        LocalDate dueDate = businessDate.minusDays(1);
+        RepaymentInstallment inst = createInstallment(1, dueDate, new BigDecimal("4442.44"), BigDecimal.ZERO, "DUE");
+
+        // First execution processes installment 1
+        int processedFirst = scheduler.runDailyReminderJob(businessDate);
+        assertEquals(1, processedFirst);
+        verify(emailReminderProvider, times(1)).sendReminderEmail(any());
+
+        List<LoanReminderLog> initialLogs = reminderLogRepository.findAll();
+        assertEquals(1, initialLogs.size());
+        assertEquals("SENT", initialLogs.get(0).getStatus());
+
+        // Second execution runs within 1 minute for the same business date
+        int processedSecond = scheduler.runDailyReminderJob(businessDate);
+        assertEquals(0, processedSecond, "Second execution should skip already fulfilled installments");
+
+        // Provider must NOT have been called a second time
+        verify(emailReminderProvider, times(1)).sendReminderEmail(any());
+
+        // Log records must NOT be duplicated
+        List<LoanReminderLog> finalLogs = reminderLogRepository.findAll();
+        assertEquals(1, finalLogs.size());
+    }
+
+    @Test
+    @DisplayName("17. SMS delivery receipt webhook transitions status to DELIVERED")
+    public void testSmsDeliveryWebhookTransitionsToDelivered() throws Exception {
+        // Customer without email receives SMS
+        testCustomer.setEmail("");
+        userRepository.save(testCustomer);
+
+        LocalDate businessDate = LocalDate.of(2026, 10, 15);
+        LocalDate dueDate = businessDate.minusDays(1);
+        createInstallment(1, dueDate, new BigDecimal("4442.44"), BigDecimal.ZERO, "DUE");
+
+        scheduler.runDailyReminderJob(businessDate);
+
+        List<LoanReminderLog> logs = reminderLogRepository.findAll();
+        assertEquals(1, logs.size());
+        LoanReminderLog smsLog = logs.get(0);
+        assertEquals("SMS", smsLog.getChannel());
+        String msgId = smsLog.getProviderMessageId();
+
+        // Webhook arrives indicating carrier delivery for SMS
+        String delivSig = webhookController.generateSignature(msgId, "DELIVERED");
+        DpdReminderWebhookController.WebhookPayload delivPayload = new DpdReminderWebhookController.WebhookPayload();
+        delivPayload.setProviderMessageId(msgId);
+        delivPayload.setEventType("DELIVERED");
+
+        mockMvc.perform(post("/api/webhooks/reminders")
+                .header("X-Webhook-Signature", delivSig)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(delivPayload)))
+                .andExpect(status().isOk());
+
+        LoanReminderLog updatedSmsLog = reminderLogRepository.findById(smsLog.getId()).orElseThrow();
+        assertEquals("DELIVERED", updatedSmsLog.getStatus());
+        assertNotNull(updatedSmsLog.getDeliveredTimestamp());
+    }
+
+    @Test
+    @DisplayName("18. Data masking utilities correctly sanitize phone numbers, accounts, and URLs")
+    public void testDataMaskingNeverExposesRawPhoneOrAccountOrUrlTokens() {
+        assertEquals("******3210", com.loanproject.loan_app.security.DataMaskingUtils.maskPhone("9876543210"));
+        assertEquals("******3210", com.loanproject.loan_app.security.DataMaskingUtils.maskPhoneNumber("9876543210"));
+        assertEquals("LN******1001", com.loanproject.loan_app.security.DataMaskingUtils.maskAccountNumber("LN0009871001"));
+
+        String rawUrl = "http://localhost:8081/payPage?account=LN0009871001&phone=9876543210&token=secretKey123&other=safe";
+        String sanitized = com.loanproject.loan_app.security.DataMaskingUtils.sanitizeUrl(rawUrl);
+
+        assertTrue(sanitized.contains("account=LN******1001"));
+        assertTrue(sanitized.contains("phone=******3210"));
+        assertTrue(sanitized.contains("token=******"));
+        assertTrue(sanitized.contains("other=safe"));
+        assertFalse(sanitized.contains("secretKey123"));
+        assertFalse(sanitized.contains("9876543210"));
+        assertFalse(sanitized.contains("LN0009871001"));
     }
 }

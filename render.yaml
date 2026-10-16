@@ -29,5 +29,19 @@ services:
         sync: false
       - key: MAIL_PASSWORD
         sync: false
+      # Outbound HTTPS Transactional Email Provider (Render blocks outbound SMTP ports 25, 465, 587)
+      - key: EMAIL_PROVIDER_TYPE
+        value: AUTO
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_API_URL
+        sync: false
+      - key: EMAIL_API_KEY
+        sync: false
       - key: REMINDER_MAIL_SIMULATE
         value: "false"
+

@@ -70,6 +70,13 @@ public final class DataMaskingUtils {
     }
 
     /**
+     * Alias for maskPhone for consistent API usage.
+     */
+    public static String maskPhoneNumber(String phone) {
+        return maskPhone(phone);
+    }
+
+    /**
      * Masks a loan account number, e.g. LN0000000001 -> LN******0001.
      */
     public static String maskAccountNumber(String accountNumber) {
@@ -84,5 +91,50 @@ public final class DataMaskingUtils {
             return "LN******" + clean.substring(clean.length() - 4);
         }
         return clean.substring(0, 2) + "******" + clean.substring(clean.length() - 4);
+    }
+
+    /**
+     * Sanitizes URLs before logging so sensitive query parameters (account, token, key, phone, etc.) are masked.
+     */
+    public static String sanitizeUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return url;
+        }
+        int queryIndex = url.indexOf('?');
+        if (queryIndex < 0 || queryIndex == url.length() - 1) {
+            return url;
+        }
+        String baseUrl = url.substring(0, queryIndex);
+        String queryString = url.substring(queryIndex + 1);
+        String[] pairs = queryString.split("&");
+        StringBuilder sanitizedQuery = new StringBuilder();
+
+        for (int i = 0; i < pairs.length; i++) {
+            if (i > 0) {
+                sanitizedQuery.append("&");
+            }
+            String pair = pairs[i];
+            int eqIndex = pair.indexOf('=');
+            if (eqIndex < 0) {
+                sanitizedQuery.append(pair);
+                continue;
+            }
+            String key = pair.substring(0, eqIndex);
+            String val = pair.substring(eqIndex + 1);
+            String lowerKey = key.toLowerCase();
+
+            if (lowerKey.contains("account")) {
+                sanitizedQuery.append(key).append("=").append(maskAccountNumber(val));
+            } else if (lowerKey.contains("phone") || lowerKey.contains("mobile")) {
+                sanitizedQuery.append(key).append("=").append(maskPhone(val));
+            } else if (lowerKey.contains("email")) {
+                sanitizedQuery.append(key).append("=").append(maskEmail(val));
+            } else if (lowerKey.contains("token") || lowerKey.contains("key") || lowerKey.contains("secret") || lowerKey.contains("pass")) {
+                sanitizedQuery.append(key).append("=******");
+            } else {
+                sanitizedQuery.append(pair);
+            }
+        }
+        return baseUrl + "?" + sanitizedQuery.toString();
     }
 }

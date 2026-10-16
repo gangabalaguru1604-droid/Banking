@@ -12,6 +12,12 @@ public class StaffDashboardLoanDto {
     private String status;
     private String branch;
     private BorrowerSummary user;
+    private String repaymentStatus;
+    private int dpd;
+    private double overdueAmount;
+    private String customerId;
+    private String maskedPhone;
+    private String createdAt;
 
     public StaffDashboardLoanDto() {
     }
@@ -19,6 +25,14 @@ public class StaffDashboardLoanDto {
     public StaffDashboardLoanDto(Long loanId, String accountNumber, String borrowerName, String maskedEmail,
                                  double amount, double interest, int months, double emi, double remaining,
                                  String status, String branch) {
+        this(loanId, accountNumber, borrowerName, maskedEmail, amount, interest, months, emi, remaining,
+             status, branch, "CURRENT", 0, 0.0, "N/A", "N/A", "N/A");
+    }
+
+    public StaffDashboardLoanDto(Long loanId, String accountNumber, String borrowerName, String maskedEmail,
+                                 double amount, double interest, int months, double emi, double remaining,
+                                 String status, String branch, String repaymentStatus, int dpd, double overdueAmount,
+                                 String customerId, String maskedPhone, String createdAt) {
         this.loanId = loanId;
         this.accountNumber = accountNumber;
         this.amount = amount;
@@ -29,6 +43,12 @@ public class StaffDashboardLoanDto {
         this.status = status;
         this.branch = branch;
         this.user = new BorrowerSummary(borrowerName, maskedEmail);
+        this.repaymentStatus = repaymentStatus;
+        this.dpd = dpd;
+        this.overdueAmount = overdueAmount;
+        this.customerId = customerId;
+        this.maskedPhone = maskedPhone;
+        this.createdAt = createdAt;
     }
 
     public Long getLoanId() {
@@ -109,6 +129,54 @@ public class StaffDashboardLoanDto {
 
     public void setUser(BorrowerSummary user) {
         this.user = user;
+    }
+
+    public String getRepaymentStatus() {
+        return repaymentStatus;
+    }
+
+    public void setRepaymentStatus(String repaymentStatus) {
+        this.repaymentStatus = repaymentStatus;
+    }
+
+    public int getDpd() {
+        return dpd;
+    }
+
+    public void setDpd(int dpd) {
+        this.dpd = dpd;
+    }
+
+    public double getOverdueAmount() {
+        return overdueAmount;
+    }
+
+    public void setOverdueAmount(double overdueAmount) {
+        this.overdueAmount = overdueAmount;
+    }
+
+    public String getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
+    }
+
+    public String getMaskedPhone() {
+        return maskedPhone;
+    }
+
+    public void setMaskedPhone(String maskedPhone) {
+        this.maskedPhone = maskedPhone;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 
     public static class BorrowerSummary {

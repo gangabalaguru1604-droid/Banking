@@ -115,28 +115,51 @@ public class DpdReminderService {
      * Process an overdue installment on the specified business date.
      * Uses claim/send/result pattern where external HTTP/SMTP sends are performed outside DB transactions.
      */
-    public void processInstallmentReminder(Long installmentId, LocalDate businessDate) {
+    public boolean processInstallmentReminder(Long installmentId, LocalDate businessDate) {
         RepaymentInstallment installment = installmentRepository.findById(installmentId).orElse(null);
         if (installment == null || !isInstallmentEligibleForReminder(installment, businessDate)) {
-            return;
+            return false;
         }
 
         int dpd = calculateDpd(installment.getDueDate(), businessDate);
         String cycle = installment.getDueDate().toString();
         User customer = installment.getLoan().getUser();
 
+        // Concurrency-safe deduplication: check if this installment for (dpd, cycle) has ALREADY been
+        // fulfilled (SENT, ACCEPTED, DELIVERED, OPENED) or is currently CLAIMED in-flight
+        List<LoanReminderLog> existingLogs = reminderLogRepository.findByInstallmentAndDpdDayAndReminderCycle(installment, dpd, cycle);
+
+        boolean alreadyFulfilled = existingLogs.stream().anyMatch(l ->
+                "SENT".equalsIgnoreCase(l.getStatus()) ||
+                "ACCEPTED".equalsIgnoreCase(l.getStatus()) ||
+                "DELIVERED".equalsIgnoreCase(l.getStatus()) ||
+                "OPENED".equalsIgnoreCase(l.getStatus())
+        );
+        if (alreadyFulfilled) {
+            log.info("Reminder for installment {} at DPD {} (cycle {}) has already been fulfilled. Skipping duplicate dispatch.",
+                    installmentId, dpd, cycle);
+            return false;
+        }
+
+        boolean inProgress = existingLogs.stream().anyMatch(l -> "CLAIMED".equalsIgnoreCase(l.getStatus()));
+        if (inProgress) {
+            log.info("Reminder for installment {} at DPD {} (cycle {}) is currently CLAIMED in-flight. Skipping duplicate execution.",
+                    installmentId, dpd, cycle);
+            return false;
+        }
+
         boolean emailAvailable = customer != null && customer.getEmail() != null && !customer.getEmail().isBlank()
                 && !customer.isContactDetailUpdateRequired();
 
         if (emailAvailable) {
-            processChannelReminder(installmentId, dpd, cycle, "EMAIL", businessDate);
+            return processChannelReminder(installmentId, dpd, cycle, "EMAIL", businessDate);
         } else {
-            // Missing email or previously flagged contact issue: direct SMS fallback
+            // Missing email or legitimate contact verification required: direct SMS fallback
             log.info("Customer for installment {} has no valid email or requires contact update; falling back to SMS", installmentId);
-            if (customer != null && !customer.isContactDetailUpdateRequired()) {
+            if (customer != null && (customer.getEmail() == null || customer.getEmail().isBlank()) && !customer.isContactDetailUpdateRequired()) {
                 flagCustomerContactDetailUpdate(customer.getId());
             }
-            processChannelReminder(installmentId, dpd, cycle, "SMS", businessDate);
+            return processChannelReminder(installmentId, dpd, cycle, "SMS", businessDate);
         }
     }
 
@@ -223,9 +246,8 @@ public class DpdReminderService {
         // 5. Handle fallback if email failed completely
         if (!sendSuccess && "EMAIL".equalsIgnoreCase(channel)) {
             log.warn("Email dispatch failed for installment {}. Initiating SMS fallback.", installmentId);
-            if (user != null) {
-                flagCustomerContactDetailUpdate(user.getId());
-            }
+            // IMPORTANT: Never flag contactDetailUpdateRequired on transient network or SMTP failures!
+            // Legitimate contact update is only flagged on hard bounce webhooks or empty email.
             // Trigger SMS fallback
             processChannelReminder(installmentId, dpdDay, reminderCycle, "SMS", businessDate);
         }
@@ -249,7 +271,7 @@ public class DpdReminderService {
         if (existingOpt.isPresent()) {
             LoanReminderLog existing = existingOpt.get();
             String st = existing.getStatus();
-            if ("SENT".equalsIgnoreCase(st) || "DELIVERED".equalsIgnoreCase(st) || "OPENED".equalsIgnoreCase(st)
+            if ("SENT".equalsIgnoreCase(st) || "ACCEPTED".equalsIgnoreCase(st) || "DELIVERED".equalsIgnoreCase(st) || "OPENED".equalsIgnoreCase(st)
                     || "CLAIMED".equalsIgnoreCase(st)) {
                 return null; // Already processed or in-progress
             }
@@ -308,17 +330,31 @@ public class DpdReminderService {
         logEntry.setUpdatedAt(Instant.now());
 
         if (result != null && result.isSuccess()) {
-            logEntry.setStatus("SENT");
+            String successStatus = "SMS".equalsIgnoreCase(logEntry.getChannel()) ? "ACCEPTED" : "SENT";
+            logEntry.setStatus(successStatus);
             logEntry.setProviderMessageId(result.getProviderMessageId());
             logEntry.setSentTimestamp(Instant.now());
             logEntry.setFailureDetails(null);
             reminderLogRepository.save(logEntry);
+            if ("SMS".equalsIgnoreCase(logEntry.getChannel())) {
+                log.info("SMS reminder ACCEPTED for installment {} with Provider Message ID: {}",
+                        logEntry.getInstallment() != null ? logEntry.getInstallment().getId() : null,
+                        result.getProviderMessageId());
+            } else {
+                log.info("Email reminder SENT for installment {} with Provider Message ID: {}",
+                        logEntry.getInstallment() != null ? logEntry.getInstallment().getId() : null,
+                        result.getProviderMessageId());
+            }
             return true;
         } else {
             logEntry.setStatus("FAILED");
             String err = result != null ? result.getErrorMessage() : "Provider returned null result";
             logEntry.setFailureDetails(err);
             reminderLogRepository.save(logEntry);
+            log.error("{} reminder FAILED for installment {}: {}",
+                    logEntry.getChannel(),
+                    logEntry.getInstallment() != null ? logEntry.getInstallment().getId() : null,
+                    err);
             return false;
         }
     }
@@ -405,6 +441,7 @@ public class DpdReminderService {
 
     /**
      * Flags a customer as requiring a contact detail update (visible to staff).
+     * Legitimate trigger: confirmed hard bounce from provider or missing/empty contact address.
      */
     @Transactional
     public void flagCustomerContactDetailUpdate(Long userId) {
@@ -412,7 +449,20 @@ public class DpdReminderService {
         userRepository.findById(userId).ifPresent(user -> {
             user.setContactDetailUpdateRequired(true);
             userRepository.save(user);
-            log.warn("Customer {} flagged with contactDetailUpdateRequired = true", user.getEmail());
+            log.warn("Customer {} flagged with contactDetailUpdateRequired = true", DataMaskingUtils.maskEmail(user.getEmail()));
+        });
+    }
+
+    /**
+     * Clears the contactDetailUpdateRequired flag when contact details are updated or verified.
+     */
+    @Transactional
+    public void clearCustomerContactDetailUpdate(Long userId) {
+        if (userId == null) return;
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setContactDetailUpdateRequired(false);
+            userRepository.save(user);
+            log.info("Customer {} contactDetailUpdateRequired cleared", DataMaskingUtils.maskEmail(user.getEmail()));
         });
     }
 

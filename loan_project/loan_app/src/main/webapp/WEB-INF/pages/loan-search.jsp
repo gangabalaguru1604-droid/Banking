@@ -1,4 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ include file="header.jsp" %>
 
 <div class="wide-card">
@@ -88,9 +90,10 @@
                             <th>Branch</th>
                             <th>Sanctioned</th>
                             <th>Outstanding</th>
-                            <th>EMI</th>
+                            <th>Repayment</th>
+                            <th>DPD</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th style="text-align:center;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -113,9 +116,44 @@
                                         <c:out value="${row.branch}"/>
                                     </span>
                                 </td>
-                                <td>₹<c:out value="${row.amount}"/></td>
-                                <td><strong style="color:#c53030;">₹<c:out value="${row.remaining}"/></strong></td>
-                                <td>₹<c:out value="${row.emi}"/></td>
+                                <td>₹<fmt:formatNumber value="${row.amount}" pattern="#,##0.00"/></td>
+                                <td><strong style="color:${row.remaining > 0 ? '#c53030' : '#276749'};">₹<fmt:formatNumber value="${row.remaining}" pattern="#,##0.00"/></strong></td>
+                                <td>
+                                    <c:choose>
+                                        <c:when test="${row.repaymentStatus == 'OVERDUE'}">
+                                            <span style="color:#9b2c2c; background:#fed7d7; padding:3px 8px; border-radius:10px; font-size:12px; font-weight:700;">
+                                                ⚠️ OVERDUE
+                                                <c:if test="${row.overdueAmount > 0}">
+                                                    (₹<fmt:formatNumber value="${row.overdueAmount}" pattern="#,##0"/>)
+                                                </c:if>
+                                            </span>
+                                        </c:when>
+                                        <c:when test="${row.repaymentStatus == 'CURRENT'}">
+                                            <span style="color:#22543d; background:#c6f6d5; padding:3px 8px; border-radius:10px; font-size:12px; font-weight:600;">CURRENT</span>
+                                        </c:when>
+                                        <c:when test="${row.repaymentStatus == 'CLOSED'}">
+                                            <span style="color:#4a5568; background:#e2e8f0; padding:3px 8px; border-radius:10px; font-size:12px; font-weight:600;">CLOSED</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span style="color:#744210; background:#feebc8; padding:3px 8px; border-radius:10px; font-size:12px; font-weight:600;"><c:out value="${row.repaymentStatus}"/></span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </td>
+                                <td>
+                                    <c:choose>
+                                        <c:when test="${row.dpd > 0}">
+                                            <span style="color:#742a2a; background:#fed7d7; padding:3px 8px; border-radius:10px; font-size:12px; font-weight:700;">
+                                                <c:out value="${row.dpd}"/> DPD
+                                            </span>
+                                        </c:when>
+                                        <c:when test="${row.status == 'CLOSED'}">
+                                            <span style="color:#a0aec0; font-size:12px;">-</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span style="color:#22543d; background:#c6f6d5; padding:3px 8px; border-radius:10px; font-size:12px; font-weight:600;">0 DPD</span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </td>
                                 <td>
                                     <c:choose>
                                         <c:when test="${row.status == 'ACTIVE'}">
@@ -132,7 +170,7 @@
                                 <td style="text-align:center;">
                                     <a href="/loan-details?loanId=${row.loanId}" 
                                        class="btn" 
-                                       style="display:inline-block; text-decoration:none; text-align:center; padding:6px 14px; font-size:12px; width:auto; background:#4f46e5; color:#ffffff; font-weight:600; border-radius:4px;">
+                                       style="display:inline-block; text-decoration:none; text-align:center; padding:6px 14px; font-size:12px; width:auto; background:#24446B; color:#ffffff; font-weight:600; border-radius:4px;">
                                         Profile
                                     </a>
                                 </td>

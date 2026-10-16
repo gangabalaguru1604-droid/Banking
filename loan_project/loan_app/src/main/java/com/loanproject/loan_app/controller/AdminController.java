@@ -214,7 +214,7 @@ public class AdminController {
         installmentRepository.save(installment);
 
         if (sendImmediately && reminderScheduler != null) {
-            reminderScheduler.runDailyReminderJob(java.time.LocalDate.now());
+            reminderScheduler.runDailyReminderJob(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")));
             return "redirect:/admin/reminders/demo?success=loan_created_and_sent";
         }
 
@@ -224,7 +224,7 @@ public class AdminController {
     @PostMapping("/reminders/demo/trigger-now")
     public String triggerReminderNow() {
         if (reminderScheduler != null) {
-            reminderScheduler.runDailyReminderJob(java.time.LocalDate.now());
+            reminderScheduler.runDailyReminderJob(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")));
         }
         return "redirect:/admin/reminders/demo?success=scheduler_executed";
     }
@@ -289,7 +289,7 @@ public class AdminController {
             @RequestParam(value = "date", required = false) String dateStr) {
         java.time.LocalDate businessDate = (dateStr != null && !dateStr.isBlank())
                 ? java.time.LocalDate.parse(dateStr.trim())
-                : java.time.LocalDate.now();
+                : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         int processed = (reminderScheduler != null) ? reminderScheduler.runDailyReminderJob(businessDate) : 0;
         return java.util.Map.of(
                 "status", "SUCCESS",

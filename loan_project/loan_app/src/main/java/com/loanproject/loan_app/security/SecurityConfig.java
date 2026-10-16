@@ -92,6 +92,12 @@ public class SecurityConfig {
                 // Repayment processing: Strictly restricted to Customers paying self (All staff roles are restricted)
                 .requestMatchers("/payPage", "/pay").hasRole("CUSTOMER")
 
+                // Staff Loan Processing (Approve / Reject): Loan Officers, Admins
+                .requestMatchers("/staff/loans/approve", "/staff/loans/reject").hasAnyRole("LOAN_OFFICER", "ADMIN")
+
+                // Staff Collections Recording: Collections Agents, Collections Managers, Admins
+                .requestMatchers("/staff/collections/record").hasAnyRole("COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
+
                 // Loan search, customer profile, and 360 degree details: Loan Officers, Collections staff, Admins
                 .requestMatchers("/loan-search", "/loan-search/**", "/customer-profile", "/customer-profile/**", "/loan-details", "/loan-details/**").hasAnyRole("LOAN_OFFICER", "COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
 

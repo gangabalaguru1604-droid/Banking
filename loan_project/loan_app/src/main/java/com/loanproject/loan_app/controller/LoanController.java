@@ -19,6 +19,7 @@ import com.loanproject.loan_app.security.CustomUserDetails;
 import com.loanproject.loan_app.services.LoanService;
 import com.loanproject.loan_app.services.UserService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 @Controller
@@ -32,6 +33,12 @@ public class LoanController {
 
     @Autowired
     private com.loanproject.loan_app.repository.PaymentTransactionRepository paymentTransactionRepository;
+
+    @Autowired(required = false)
+    private com.loanproject.loan_app.security.AuthAuditService auditService;
+
+    @Autowired(required = false)
+    private com.loanproject.loan_app.repository.RepaymentInstallmentRepository installmentRepository;
 
     private User getAuthenticatedUser(HttpSession session) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -103,29 +110,100 @@ public class LoanController {
                     ? "ALL"
                     : (u.getBranch() != null ? u.getBranch() : "MAIN");
 
-            java.util.List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = service.getAll().stream()
+            List<Loan> rawBranchLoans = service.getAll().stream()
                     .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
-                    .map(l -> {
-                        String borrowerName = l.getUser() != null ? l.getUser().getName() : "Unknown";
-                        String rawEmail = l.getUser() != null ? l.getUser().getEmail() : "";
-                        String maskedEmail = com.loanproject.loan_app.security.DataMaskingUtils.maskEmail(rawEmail);
-                        return new com.loanproject.loan_app.dto.StaffDashboardLoanDto(
-                                l.getLoanId(),
-                                l.getAccountNumber() != null ? l.getAccountNumber() : String.format("LN%010d", l.getLoanId()),
-                                borrowerName,
-                                maskedEmail,
-                                l.getAmount(),
-                                l.getInterest(),
-                                l.getMonths(),
-                                l.getEmi(),
-                                l.getRemaining(),
-                                l.getStatus() != null ? l.getStatus() : "ACTIVE",
-                                l.getBranch() != null ? l.getBranch() : "MAIN"
-                        );
-                    })
                     .toList();
 
+            List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = rawBranchLoans.stream()
+                    .map(this::mapToStaffLoanDto)
+                    .toList();
+
+            // Portfolio Aggregates
+            double totalPrincipal = staffLoans.stream().mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getAmount).sum();
+            double totalRemaining = staffLoans.stream().mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getRemaining).sum();
+            double totalOverdueAmount = staffLoans.stream().mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getOverdueAmount).sum();
+
+            int totalLoansCount = staffLoans.size();
+            int activeLoansCount = (int) staffLoans.stream().filter(l -> "ACTIVE".equalsIgnoreCase(l.getStatus())).count();
+            int closedLoansCount = (int) staffLoans.stream().filter(l -> "CLOSED".equalsIgnoreCase(l.getStatus())).count();
+            int pendingLoansCount = (int) staffLoans.stream().filter(l -> "PENDING".equalsIgnoreCase(l.getStatus())
+                    || "SUBMITTED".equalsIgnoreCase(l.getStatus())
+                    || "IN_REVIEW".equalsIgnoreCase(l.getStatus())
+                    || "APPLIED".equalsIgnoreCase(l.getStatus())).count();
+            int overdueLoansCount = (int) staffLoans.stream().filter(l -> "OVERDUE".equalsIgnoreCase(l.getRepaymentStatus()) || l.getDpd() > 0).count();
+
+            // DPD bucket aggregations (for Collections Agent and Collections Manager)
+            long dpdCurrentCount = staffLoans.stream().filter(l -> l.getDpd() == 0 && !"CLOSED".equalsIgnoreCase(l.getStatus()) && !"REJECTED".equalsIgnoreCase(l.getStatus())).count();
+            double dpdCurrentAmount = staffLoans.stream().filter(l -> l.getDpd() == 0 && !"CLOSED".equalsIgnoreCase(l.getStatus()) && !"REJECTED".equalsIgnoreCase(l.getStatus())).mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getRemaining).sum();
+
+            long dpdSma0Count = staffLoans.stream().filter(l -> l.getDpd() >= 1 && l.getDpd() <= 30).count();
+            double dpdSma0Amount = staffLoans.stream().filter(l -> l.getDpd() >= 1 && l.getDpd() <= 30).mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getOverdueAmount).sum();
+
+            long dpdSma1Count = staffLoans.stream().filter(l -> l.getDpd() >= 31 && l.getDpd() <= 60).count();
+            double dpdSma1Amount = staffLoans.stream().filter(l -> l.getDpd() >= 31 && l.getDpd() <= 60).mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getOverdueAmount).sum();
+
+            long dpdSma2Count = staffLoans.stream().filter(l -> l.getDpd() >= 61 && l.getDpd() <= 90).count();
+            double dpdSma2Amount = staffLoans.stream().filter(l -> l.getDpd() >= 61 && l.getDpd() <= 90).mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getOverdueAmount).sum();
+
+            long dpdNpaCount = staffLoans.stream().filter(l -> l.getDpd() > 90).count();
+            double dpdNpaAmount = staffLoans.stream().filter(l -> l.getDpd() > 90).mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getOverdueAmount).sum();
+
+            double parRate = totalRemaining > 0 ? (totalOverdueAmount / totalRemaining) * 100.0 : 0.0;
+
+            // Role-specific lists
+            List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> pendingLoans = staffLoans.stream()
+                    .filter(l -> "PENDING".equalsIgnoreCase(l.getStatus())
+                            || "SUBMITTED".equalsIgnoreCase(l.getStatus())
+                            || "IN_REVIEW".equalsIgnoreCase(l.getStatus())
+                            || "APPLIED".equalsIgnoreCase(l.getStatus()))
+                    .toList();
+
+            List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> delinquentLoans = staffLoans.stream()
+                    .filter(l -> ("OVERDUE".equalsIgnoreCase(l.getRepaymentStatus()) || l.getDpd() > 0) && !"CLOSED".equalsIgnoreCase(l.getStatus()))
+                    .toList();
+
+            List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> activeLoans = staffLoans.stream()
+                    .filter(l -> "ACTIVE".equalsIgnoreCase(l.getStatus()))
+                    .toList();
+
+            // Recent branch collections
+            List<com.loanproject.loan_app.bean.PaymentTransaction> recentCollections = java.util.List.of();
+            if (!rawBranchLoans.isEmpty()) {
+                try {
+                    recentCollections = paymentTransactionRepository.findByLoanInOrderByPaymentDateDesc(rawBranchLoans).stream()
+                            .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
+                            .limit(10)
+                            .toList();
+                } catch (Exception ignored) {}
+            }
+
             m.addAttribute("loans", staffLoans);
+            m.addAttribute("pendingLoans", pendingLoans);
+            m.addAttribute("delinquentLoans", delinquentLoans);
+            m.addAttribute("activeLoans", activeLoans);
+            m.addAttribute("recentCollections", recentCollections);
+
+            m.addAttribute("totalPrincipal", totalPrincipal);
+            m.addAttribute("totalRemaining", totalRemaining);
+            m.addAttribute("totalOverdueAmount", totalOverdueAmount);
+            m.addAttribute("totalLoansCount", totalLoansCount);
+            m.addAttribute("activeLoansCount", activeLoansCount);
+            m.addAttribute("closedLoansCount", closedLoansCount);
+            m.addAttribute("pendingLoansCount", pendingLoansCount);
+            m.addAttribute("overdueLoansCount", overdueLoansCount);
+
+            m.addAttribute("dpdCurrentCount", dpdCurrentCount);
+            m.addAttribute("dpdCurrentAmount", dpdCurrentAmount);
+            m.addAttribute("dpdSma0Count", dpdSma0Count);
+            m.addAttribute("dpdSma0Amount", dpdSma0Amount);
+            m.addAttribute("dpdSma1Count", dpdSma1Count);
+            m.addAttribute("dpdSma1Amount", dpdSma1Amount);
+            m.addAttribute("dpdSma2Count", dpdSma2Count);
+            m.addAttribute("dpdSma2Amount", dpdSma2Amount);
+            m.addAttribute("dpdNpaCount", dpdNpaCount);
+            m.addAttribute("dpdNpaAmount", dpdNpaAmount);
+            m.addAttribute("parRate", Math.round(parRate * 100.0) / 100.0);
+
             m.addAttribute("isStaff", true);
             m.addAttribute("userRole", u.getRole().name());
             m.addAttribute("officerBranch", branchFilter);
@@ -144,14 +222,18 @@ public class LoanController {
         }
 
         m.addAttribute("currentUser", u);
+        m.addAttribute("defaultInterestRate", service.getDefaultInterestRate());
+        m.addAttribute("defaultTenureMonths", service.getDefaultTenureMonths());
+        m.addAttribute("minLoanAmount", service.getMinAmount());
+        m.addAttribute("maxLoanAmount", service.getMaxAmount());
         return "applyLoan";
     }
 
     @PostMapping("/applyLoan")
     public String apply(HttpSession s,
                         @RequestParam(value = "amount") double amount,
-                        @RequestParam(value = "interest") double interest,
-                        @RequestParam(value = "months") int months,
+                        @RequestParam(value = "interest", required = false) Double clientInterest,
+                        @RequestParam(value = "months", required = false) Integer clientMonths,
                         @RequestParam(value = "customerEmail", required = false) String customerEmail) {
         User u = getAuthenticatedUser(s);
 
@@ -160,7 +242,13 @@ public class LoanController {
             throw new AccessDeniedException("Collections staff are not authorized to originate loans.");
         }
 
+        // Validate amount against configured limits
+        service.validateLoanAmount(amount);
+
         User targetUser;
+        double effectiveInterest = service.getDefaultInterestRate();
+        int effectiveTenure = service.getDefaultTenureMonths();
+
         if (u.getRole() == AppRole.ROLE_LOAN_OFFICER || u.getRole() == AppRole.ROLE_ADMIN) {
             if (customerEmail == null || customerEmail.trim().isEmpty()) {
                 throw new IllegalArgumentException("Customer email is required for staff loan origination.");
@@ -170,14 +258,24 @@ public class LoanController {
             if (targetUser.getRole() != AppRole.ROLE_CUSTOMER) {
                 throw new AccessDeniedException("Loans can only be originated for customers.");
             }
+            if (clientInterest != null && clientInterest > 0) {
+                effectiveInterest = clientInterest;
+            }
+            if (clientMonths != null && clientMonths > 0) {
+                effectiveTenure = clientMonths;
+            }
         } else if (u.getRole() == AppRole.ROLE_CUSTOMER) {
-            // Customer applying for self
+            // Customer self-service:
+            // SECURITY: Never trust interest rate or tenure submitted by client.
+            // Client interest & tenure parameters are strictly ignored and server-side values enforced.
             targetUser = u;
+            effectiveInterest = service.getDefaultInterestRate();
+            effectiveTenure = service.getDefaultTenureMonths();
         } else {
             throw new AccessDeniedException("Unauthorized to originate loans.");
         }
 
-        service.apply(targetUser, amount, interest, months);
+        service.apply(targetUser, amount, effectiveInterest, effectiveTenure);
         return "redirect:/dashboard";
     }
 
@@ -324,5 +422,172 @@ public class LoanController {
                 .sorted(java.util.Comparator.comparing(com.loanproject.loan_app.dto.CustomerActivityDto::getTimestamp).reversed())
                 .limit(5)
                 .toList();
+    }
+
+    @PostMapping("/staff/loans/approve")
+    public String approveStaffLoan(@RequestParam("loanId") Long loanId,
+                                   HttpSession s,
+                                   HttpServletRequest request) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() != AppRole.ROLE_LOAN_OFFICER && u.getRole() != AppRole.ROLE_ADMIN) {
+            throw new AccessDeniedException("Unauthorized: Only Loan Officers and Admins can approve loan applications.");
+        }
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN || "ALL".equalsIgnoreCase(u.getBranch()))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        Loan approved = service.approveLoan(loanId, u.getEmail(), branchFilter);
+        if (auditService != null) {
+            auditService.logLoanApplicationApproved(u.getEmail(), request, loanId, approved.getBranch());
+        }
+        return "redirect:/dashboard?approved=true";
+    }
+
+    @PostMapping("/staff/loans/reject")
+    public String rejectStaffLoan(@RequestParam("loanId") Long loanId,
+                                  @RequestParam(value = "reason", required = false, defaultValue = "Application does not meet eligibility criteria") String reason,
+                                  HttpSession s,
+                                  HttpServletRequest request) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() != AppRole.ROLE_LOAN_OFFICER && u.getRole() != AppRole.ROLE_ADMIN) {
+            throw new AccessDeniedException("Unauthorized: Only Loan Officers and Admins can reject loan applications.");
+        }
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN || "ALL".equalsIgnoreCase(u.getBranch()))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        Loan rejected = service.rejectLoan(loanId, reason, u.getEmail(), branchFilter);
+        if (auditService != null) {
+            auditService.logLoanApplicationRejected(u.getEmail(), request, loanId, reason, rejected.getBranch());
+        }
+        return "redirect:/dashboard?rejected=true";
+    }
+
+    @PostMapping("/staff/collections/record")
+    public String recordStaffCollection(@RequestParam("loanId") Long loanId,
+                                        @RequestParam("amount") double amount,
+                                        @RequestParam(value = "paymentMode", required = false, defaultValue = "CASH") String paymentMode,
+                                        @RequestParam(value = "transactionReference", required = false) String transactionReference,
+                                        HttpSession s,
+                                        HttpServletRequest request) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() != AppRole.ROLE_COLLECTIONS_AGENT && u.getRole() != AppRole.ROLE_COLLECTIONS_MANAGER && u.getRole() != AppRole.ROLE_ADMIN) {
+            throw new AccessDeniedException("Unauthorized: Role not permitted to record collections.");
+        }
+
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Collection payment amount must be greater than zero.");
+        }
+
+        Loan loan = service.getById(loanId).orElseThrow(() -> new IllegalArgumentException("Loan not found: " + loanId));
+
+        // Enforce branch authorization
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN || "ALL".equalsIgnoreCase(u.getBranch()))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        if (!"ALL".equalsIgnoreCase(branchFilter) && !branchFilter.equalsIgnoreCase(loan.getBranch())) {
+            if (auditService != null) {
+                auditService.logCollectionDenied(u.getEmail(), request, loanId,
+                        "Officer branch " + branchFilter + " unauthorized for loan branch " + loan.getBranch());
+            }
+            throw new AccessDeniedException("Unauthorized: Loan belongs to another branch.");
+        }
+
+        if (amount > loan.getRemaining()) {
+            throw new IllegalArgumentException("Collection amount (₹" + amount + ") cannot exceed outstanding balance of ₹" + loan.getRemaining());
+        }
+
+        String txRef = (transactionReference != null && !transactionReference.isBlank())
+                ? transactionReference.trim()
+                : "COL" + System.currentTimeMillis() + (int) (Math.random() * 1000);
+
+        String mode = (paymentMode != null && !paymentMode.isBlank()) ? paymentMode.trim().toUpperCase() : "CASH";
+
+        service.pay(loanId, amount, mode, txRef);
+
+        if (auditService != null) {
+            auditService.logCollectionRecorded(u.getEmail(), request, loanId, amount, mode, txRef, loan.getBranch());
+        }
+
+        return "redirect:/dashboard?collectionRecorded=true";
+    }
+
+    private com.loanproject.loan_app.dto.StaffDashboardLoanDto mapToStaffLoanDto(Loan l) {
+        String borrowerName = l.getUser() != null ? l.getUser().getName() : "Unknown";
+        String rawEmail = l.getUser() != null ? l.getUser().getEmail() : "";
+        String maskedEmail = com.loanproject.loan_app.security.DataMaskingUtils.maskEmail(rawEmail);
+        String customerId = l.getUser() != null && l.getUser().getCustomerId() != null
+                ? l.getUser().getCustomerId()
+                : (l.getUser() != null ? "CUST" + l.getUser().getId() : "N/A");
+        String maskedPhone = l.getUser() != null ? com.loanproject.loan_app.security.DataMaskingUtils.maskPhone(l.getUser().getPhoneNumber()) : "N/A";
+        String createdAt = l.getCreatedAt() != null
+                ? java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm").withZone(java.time.ZoneId.systemDefault()).format(l.getCreatedAt())
+                : "N/A";
+
+        String repaymentStatus = "CURRENT";
+        int dpd = 0;
+        double overdueAmount = 0.0;
+
+        String loanStatus = l.getStatus() != null ? l.getStatus() : "ACTIVE";
+        if ("CLOSED".equalsIgnoreCase(loanStatus)) {
+            repaymentStatus = "CLOSED";
+        } else if ("REJECTED".equalsIgnoreCase(loanStatus)) {
+            repaymentStatus = "REJECTED";
+        } else if ("PENDING".equalsIgnoreCase(loanStatus) || "SUBMITTED".equalsIgnoreCase(loanStatus)
+                || "IN_REVIEW".equalsIgnoreCase(loanStatus) || "APPLIED".equalsIgnoreCase(loanStatus)) {
+            repaymentStatus = "PENDING_APPROVAL";
+        } else {
+            if (l.getRemaining() <= 0) {
+                repaymentStatus = "CLOSED";
+            } else if (installmentRepository != null) {
+                java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
+                java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment> installments =
+                        installmentRepository.findByLoan_LoanIdOrderByInstallmentNumberAsc(l.getLoanId());
+                int maxDpd = 0;
+                double totalOverdue = 0.0;
+                for (com.loanproject.loan_app.bean.RepaymentInstallment inst : installments) {
+                    if ("OVERDUE".equalsIgnoreCase(inst.getStatus()) ||
+                            ("PARTIALLY_PAID".equalsIgnoreCase(inst.getStatus()) && inst.getDpd() > 0) ||
+                            (inst.getDueDate() != null && inst.getDueDate().isBefore(today) &&
+                                    (inst.getPaidAmount() == null || inst.getPaidAmount().compareTo(inst.getEmiAmount()) < 0))) {
+                        int calculatedDpd = inst.getDpd() > 0 ? inst.getDpd() :
+                                (inst.getDueDate() != null ? Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(inst.getDueDate(), today)) : 0);
+                        if (calculatedDpd > maxDpd) {
+                            maxDpd = calculatedDpd;
+                        }
+                        java.math.BigDecimal emi = inst.getEmiAmount() != null ? inst.getEmiAmount() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal paid = inst.getPaidAmount() != null ? inst.getPaidAmount() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal unpaid = emi.subtract(paid).max(java.math.BigDecimal.ZERO);
+                        totalOverdue += unpaid.doubleValue();
+                    }
+                }
+                if (maxDpd > 0 || totalOverdue > 0) {
+                    repaymentStatus = "OVERDUE";
+                    dpd = maxDpd;
+                    overdueAmount = Math.round(totalOverdue * 100.0) / 100.0;
+                }
+            }
+        }
+
+        return new com.loanproject.loan_app.dto.StaffDashboardLoanDto(
+                l.getLoanId(),
+                l.getAccountNumber() != null ? l.getAccountNumber() : String.format("LN%010d", l.getLoanId()),
+                borrowerName,
+                maskedEmail,
+                l.getAmount(),
+                l.getInterest(),
+                l.getMonths(),
+                l.getEmi(),
+                l.getRemaining(),
+                loanStatus,
+                l.getBranch() != null ? l.getBranch() : "MAIN",
+                repaymentStatus,
+                dpd,
+                overdueAmount,
+                customerId,
+                maskedPhone,
+                createdAt
+        );
     }
 }

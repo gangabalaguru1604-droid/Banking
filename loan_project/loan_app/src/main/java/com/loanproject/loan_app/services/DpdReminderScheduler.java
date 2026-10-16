@@ -2,6 +2,7 @@ package com.loanproject.loan_app.services;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ public class DpdReminderScheduler {
 
     private final RepaymentInstallmentRepository installmentRepository;
     private final DpdReminderService reminderService;
+    private final AtomicBoolean isJobRunning = new AtomicBoolean(false);
 
     @Value("${reminder.scheduler.enabled:true}")
     private boolean schedulerEnabled = true;
@@ -65,33 +67,45 @@ public class DpdReminderScheduler {
             businessDate = LocalDate.now(ZoneId.of(businessTimezone));
         }
 
-        // Installments due 1, 2, or 3 calendar days ago
-        LocalDate minDueDate = businessDate.minusDays(3); // DPD 3
-        LocalDate maxDueDate = businessDate.minusDays(1); // DPD 1
+        if (!isJobRunning.compareAndSet(false, true)) {
+            log.warn("DPD Reminder Job is already actively running for business date {}. Skipping concurrent overlapping execution.",
+                    businessDate);
+            return 0;
+        }
 
-        log.info("Identifying eligible overdue installments with due date between {} and {}", minDueDate, maxDueDate);
+        try {
+            // Installments due 1, 2, or 3 calendar days ago
+            LocalDate minDueDate = businessDate.minusDays(3); // DPD 3
+            LocalDate maxDueDate = businessDate.minusDays(1); // DPD 1
 
-        int processedCount = 0;
-        int pageIndex = 0;
-        Page<RepaymentInstallment> pageResult;
+            log.info("Identifying eligible overdue installments with due date between {} and {}", minDueDate, maxDueDate);
 
-        do {
-            pageResult = installmentRepository.findEligibleOverdueInstallments(
-                    minDueDate, maxDueDate, PageRequest.of(pageIndex, batchSize));
+            int processedCount = 0;
+            int pageIndex = 0;
+            Page<RepaymentInstallment> pageResult;
 
-            for (RepaymentInstallment inst : pageResult.getContent()) {
-                try {
-                    reminderService.processInstallmentReminder(inst.getId(), businessDate);
-                    processedCount++;
-                } catch (Exception ex) {
-                    log.error("Failed to process reminder for installment {}: {}", inst.getId(), ex.getMessage(), ex);
+            do {
+                pageResult = installmentRepository.findEligibleOverdueInstallments(
+                        minDueDate, maxDueDate, PageRequest.of(pageIndex, batchSize));
+
+                for (RepaymentInstallment inst : pageResult.getContent()) {
+                    try {
+                        boolean dispatched = reminderService.processInstallmentReminder(inst.getId(), businessDate);
+                        if (dispatched) {
+                            processedCount++;
+                        }
+                    } catch (Exception ex) {
+                        log.error("Failed to process reminder for installment {}: {}", inst.getId(), ex.getMessage(), ex);
+                    }
                 }
-            }
-            pageIndex++;
-        } while (pageResult.hasNext());
+                pageIndex++;
+            } while (pageResult.hasNext());
 
-        log.info("Completed DPD Reminder Job for business date {}. Processed {} eligible installments.",
-                businessDate, processedCount);
-        return processedCount;
+            log.info("Completed DPD Reminder Job for business date {}. Processed {} eligible installments.",
+                    businessDate, processedCount);
+            return processedCount;
+        } finally {
+            isJobRunning.set(false);
+        }
     }
 }

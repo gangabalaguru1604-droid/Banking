@@ -41,10 +41,18 @@ public class LoanSearchService {
 
     private final LoanRepository loanRepository;
     private final AuthAuditService auditService;
+    private final com.loanproject.loan_app.repository.RepaymentInstallmentRepository installmentRepository;
 
-    public LoanSearchService(LoanRepository loanRepository, AuthAuditService auditService) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public LoanSearchService(LoanRepository loanRepository, AuthAuditService auditService,
+                             @org.springframework.beans.factory.annotation.Autowired(required = false) com.loanproject.loan_app.repository.RepaymentInstallmentRepository installmentRepository) {
         this.loanRepository = loanRepository;
         this.auditService = auditService;
+        this.installmentRepository = installmentRepository;
+    }
+
+    public LoanSearchService(LoanRepository loanRepository, AuthAuditService auditService) {
+        this(loanRepository, auditService, null);
     }
 
     /**
@@ -222,6 +230,51 @@ public class LoanSearchService {
         String customerName = u != null ? u.getName() : "Unknown";
         String maskedPhone = u != null ? DataMaskingUtils.maskPhone(u.getPhoneNumber()) : "N/A";
 
+        String repaymentStatus = "CURRENT";
+        int dpd = 0;
+        double overdueAmount = 0.0;
+
+        String loanStatus = loan.getStatus() != null ? loan.getStatus() : "ACTIVE";
+        if ("CLOSED".equalsIgnoreCase(loanStatus)) {
+            repaymentStatus = "CLOSED";
+        } else if ("REJECTED".equalsIgnoreCase(loanStatus)) {
+            repaymentStatus = "REJECTED";
+        } else if ("PENDING".equalsIgnoreCase(loanStatus) || "SUBMITTED".equalsIgnoreCase(loanStatus)
+                || "IN_REVIEW".equalsIgnoreCase(loanStatus) || "APPLIED".equalsIgnoreCase(loanStatus)) {
+            repaymentStatus = "PENDING_APPROVAL";
+        } else {
+            if (loan.getRemaining() <= 0) {
+                repaymentStatus = "CLOSED";
+            } else if (installmentRepository != null) {
+                java.time.LocalDate today = java.time.LocalDate.now(ZoneId.systemDefault());
+                List<com.loanproject.loan_app.bean.RepaymentInstallment> installments =
+                        installmentRepository.findByLoan_LoanIdOrderByInstallmentNumberAsc(loan.getLoanId());
+                int maxDpd = 0;
+                double totalOverdue = 0.0;
+                for (com.loanproject.loan_app.bean.RepaymentInstallment inst : installments) {
+                    if ("OVERDUE".equalsIgnoreCase(inst.getStatus()) ||
+                            ("PARTIALLY_PAID".equalsIgnoreCase(inst.getStatus()) && inst.getDpd() > 0) ||
+                            (inst.getDueDate() != null && inst.getDueDate().isBefore(today) &&
+                                    (inst.getPaidAmount() == null || inst.getPaidAmount().compareTo(inst.getEmiAmount()) < 0))) {
+                        int calculatedDpd = inst.getDpd() > 0 ? inst.getDpd() :
+                                (inst.getDueDate() != null ? Math.max(0, (int) java.time.temporal.ChronoUnit.DAYS.between(inst.getDueDate(), today)) : 0);
+                        if (calculatedDpd > maxDpd) {
+                            maxDpd = calculatedDpd;
+                        }
+                        java.math.BigDecimal emi = inst.getEmiAmount() != null ? inst.getEmiAmount() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal paid = inst.getPaidAmount() != null ? inst.getPaidAmount() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal unpaid = emi.subtract(paid).max(java.math.BigDecimal.ZERO);
+                        totalOverdue += unpaid.doubleValue();
+                    }
+                }
+                if (maxDpd > 0 || totalOverdue > 0) {
+                    repaymentStatus = "OVERDUE";
+                    dpd = maxDpd;
+                    overdueAmount = Math.round(totalOverdue * 100.0) / 100.0;
+                }
+            }
+        }
+
         return new LoanSearchResultDto(
                 loan.getLoanId(),
                 loan.getAccountNumber(),
@@ -232,7 +285,10 @@ public class LoanSearchService {
                 loan.getRemaining(),
                 loan.getEmi(),
                 loan.getStatus(),
-                loan.getBranch()
+                loan.getBranch(),
+                repaymentStatus,
+                dpd,
+                overdueAmount
         );
     }
 

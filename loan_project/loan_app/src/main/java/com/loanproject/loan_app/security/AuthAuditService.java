@@ -163,4 +163,24 @@ public class AuthAuditService {
         record(username, request, "LOAN_STATEMENT_DOWNLOAD_DENIED", "FAILURE", "UNAUTHORIZED_BRANCH_OR_ROLE",
                 "Loan Statement PDF download denied for loanId: " + loanId + " - " + reason);
     }
+
+    public void logLoanApplicationApproved(String username, HttpServletRequest request, Long loanId, String branch) {
+        record(username, request, "LOAN_APPLICATION_APPROVED", "SUCCESS", null,
+                "Loan application approved and activated for loanId: " + loanId + " at branch: " + branch);
+    }
+
+    public void logLoanApplicationRejected(String username, HttpServletRequest request, Long loanId, String reason, String branch) {
+        record(username, request, "LOAN_APPLICATION_REJECTED", "SUCCESS", null,
+                "Loan application rejected for loanId: " + loanId + " at branch: " + branch + " - Reason: " + reason);
+    }
+
+    public void logCollectionRecorded(String username, HttpServletRequest request, Long loanId, double amount, String mode, String reference, String branch) {
+        record(username, request, "COLLECTION_RECORDED", "SUCCESS", null,
+                "Collection of ₹" + amount + " recorded via " + mode + " (Ref: " + reference + ") for loanId: " + loanId + " at branch: " + branch);
+    }
+
+    public void logCollectionDenied(String username, HttpServletRequest request, Long loanId, String reason) {
+        record(username, request, "COLLECTION_RECORD_DENIED", "FAILURE", "UNAUTHORIZED_OR_INVALID",
+                "Collection recording denied for loanId: " + loanId + " - " + reason);
+    }
 }

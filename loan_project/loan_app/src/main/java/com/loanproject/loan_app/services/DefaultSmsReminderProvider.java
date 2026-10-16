@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import com.loanproject.loan_app.dto.ReminderMessageRequest;
 import com.loanproject.loan_app.dto.ReminderSendResult;
 
+import com.loanproject.loan_app.security.DataMaskingUtils;
+
 @Service
 public class DefaultSmsReminderProvider implements SmsReminderProvider {
 
@@ -36,12 +38,13 @@ public class DefaultSmsReminderProvider implements SmsReminderProvider {
             return ReminderSendResult.failure("Recipient phone number is missing", false);
         }
 
-        String messageText = buildSmsText(request);
+        String maskedPhone = DataMaskingUtils.maskPhone(request.getRecipientPhone());
         String providerMessageId = "SMS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        log.info("Dispatching SMS via [{}] to {}: {}", senderId, request.getRecipientPhone(), messageText);
+        log.info("SMS dispatch ATTEMPTED via [{}] to recipient {}", senderId, maskedPhone);
 
-        // SMS providers return an accepted message ID
+        // SMS providers return an accepted message ID upon successful queueing
+        log.info("SMS ACCEPTED by gateway [{}] with Message ID: {} for recipient {}", senderId, providerMessageId, maskedPhone);
         return ReminderSendResult.success(providerMessageId);
     }
 

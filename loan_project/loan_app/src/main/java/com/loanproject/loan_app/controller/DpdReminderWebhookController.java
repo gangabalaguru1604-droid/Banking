@@ -162,7 +162,7 @@ public class DpdReminderWebhookController {
             @org.springframework.web.bind.annotation.RequestParam(value = "date", required = false) String dateStr) {
         java.time.LocalDate businessDate = (dateStr != null && !dateStr.isBlank())
                 ? java.time.LocalDate.parse(dateStr.trim())
-                : java.time.LocalDate.now();
+                : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         int processed = (reminderScheduler != null) ? reminderScheduler.runDailyReminderJob(businessDate) : 0;
         return ResponseEntity.ok(Map.of(
                 "status", "SUCCESS",
