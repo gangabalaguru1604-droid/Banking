@@ -26,6 +26,9 @@ public class LoanService {
     @Autowired(required = false)
     private DpdReminderService dpdReminderService;
 
+    @Autowired
+    private LoanPolicyService loanPolicyService;
+
     @org.springframework.beans.factory.annotation.Value("${loan.product.default.interest-rate:10.5}")
     private double defaultInterestRate = 10.5;
 
@@ -38,39 +41,93 @@ public class LoanService {
     @org.springframework.beans.factory.annotation.Value("${loan.product.max-amount:10000000.0}")
     private double maxAmount = 10000000.0;
 
+    public LoanPolicyService getLoanPolicyService() {
+        return loanPolicyService;
+    }
+
+    public void setLoanPolicyService(LoanPolicyService loanPolicyService) {
+        this.loanPolicyService = loanPolicyService;
+    }
+
+    public com.loanproject.loan_app.policy.LoanSlab getSlabForAmount(double amount) {
+        if (loanPolicyService != null) {
+            return loanPolicyService.getSlabForAmount(amount);
+        }
+        return new com.loanproject.loan_app.policy.LoanSlab("Default", minAmount, maxAmount, defaultInterestRate, defaultTenureMonths);
+    }
+
+    public List<com.loanproject.loan_app.policy.LoanSlab> getLoanSlabs() {
+        if (loanPolicyService != null) {
+            return loanPolicyService.getSlabs();
+        }
+        return java.util.Collections.emptyList();
+    }
+
+    public double determineInterestRate(double amount) {
+        return getSlabForAmount(amount).getInterestRate();
+    }
+
+    public int determineTenureMonths(double amount) {
+        return getSlabForAmount(amount).getTenureMonths();
+    }
+
     public double getDefaultInterestRate() {
-        return defaultInterestRate;
+        return loanPolicyService != null ? loanPolicyService.getDefaultInterestRate() : defaultInterestRate;
+    }
+
+    public double getDefaultInterestRate(double amount) {
+        return determineInterestRate(amount);
     }
 
     public void setDefaultInterestRate(double defaultInterestRate) {
         this.defaultInterestRate = defaultInterestRate;
+        if (loanPolicyService != null) {
+            loanPolicyService.setDefaultInterestRate(defaultInterestRate);
+        }
     }
 
     public int getDefaultTenureMonths() {
-        return defaultTenureMonths;
+        return loanPolicyService != null ? loanPolicyService.getDefaultTenureMonths() : defaultTenureMonths;
+    }
+
+    public int getDefaultTenureMonths(double amount) {
+        return determineTenureMonths(amount);
     }
 
     public void setDefaultTenureMonths(int defaultTenureMonths) {
         this.defaultTenureMonths = defaultTenureMonths;
+        if (loanPolicyService != null) {
+            loanPolicyService.setDefaultTenureMonths(defaultTenureMonths);
+        }
     }
 
     public double getMinAmount() {
-        return minAmount;
+        return loanPolicyService != null ? loanPolicyService.getMinAmount() : minAmount;
     }
 
     public void setMinAmount(double minAmount) {
         this.minAmount = minAmount;
+        if (loanPolicyService != null) {
+            loanPolicyService.setMinAmount(minAmount);
+        }
     }
 
     public double getMaxAmount() {
-        return maxAmount;
+        return loanPolicyService != null ? loanPolicyService.getMaxAmount() : maxAmount;
     }
 
     public void setMaxAmount(double maxAmount) {
         this.maxAmount = maxAmount;
+        if (loanPolicyService != null) {
+            loanPolicyService.setMaxAmount(maxAmount);
+        }
     }
 
     public void validateLoanAmount(double amount) {
+        if (loanPolicyService != null) {
+            loanPolicyService.validateAmount(amount);
+            return;
+        }
         if (Double.isNaN(amount) || Double.isInfinite(amount) || amount < minAmount || amount > maxAmount) {
             throw new IllegalArgumentException(String.format("Loan amount must be between ₹%,.2f and ₹%,.2f", minAmount, maxAmount));
         }
@@ -78,7 +135,8 @@ public class LoanService {
 
     public Loan applyWithPredefinedTerms(User user, double amount) {
         validateLoanAmount(amount);
-        return apply(user, amount, defaultInterestRate, defaultTenureMonths);
+        com.loanproject.loan_app.policy.LoanSlab slab = getSlabForAmount(amount);
+        return apply(user, amount, slab.getInterestRate(), slab.getTenureMonths());
     }
 
     public Loan apply(User user, double amount, double interest, int months) {

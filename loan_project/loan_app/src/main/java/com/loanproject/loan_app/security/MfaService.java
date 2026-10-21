@@ -1,7 +1,12 @@
 package com.loanproject.loan_app.security;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.loanproject.loan_app.bean.MfaChallenge;
 import com.loanproject.loan_app.bean.User;
 import com.loanproject.loan_app.repository.MfaChallengeRepository;
+import com.loanproject.loan_app.repository.UserRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -30,19 +37,169 @@ public class MfaService {
     private static final Duration CHALLENGE_VALIDITY = Duration.ofMinutes(5);
 
     private final MfaChallengeRepository challengeRepo;
+    private final UserRepository userRepository;
     private final AuthAuditService auditService;
     private final Map<String, MfaProvider> providers;
+    private final CustomerOtpDeliveryService customerOtpDeliveryService;
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    @Value("${mfa.staff.static-otp-enabled:true}")
+    private boolean staffStaticOtpEnabled = true;
+
+    @Value("${mfa.staff.test-otp:123456}")
+    private String staffTestOtp = "123456";
+
+    @Value("${mfa.customer.otp-validity-minutes:5}")
+    private int customerOtpValidityMinutes = 5;
+
+    @Value("${mfa.customer.max-attempts:3}")
+    private int customerMaxAttempts = 3;
 
     // Rate-limiting challenge creation per user ID (timestamp of last creation)
     private final Map<Long, Instant> lastCreationTimeByUser = new ConcurrentHashMap<>();
 
     public MfaService(MfaChallengeRepository challengeRepo,
+                      UserRepository userRepository,
                       AuthAuditService auditService,
-                      List<MfaProvider> providerList) {
+                      List<MfaProvider> providerList,
+                      CustomerOtpDeliveryService customerOtpDeliveryService) {
         this.challengeRepo = challengeRepo;
+        this.userRepository = userRepository;
         this.auditService = auditService;
+        this.customerOtpDeliveryService = customerOtpDeliveryService;
         this.providers = providerList.stream()
                 .collect(Collectors.toMap(MfaProvider::getType, Function.identity()));
+    }
+
+    public boolean isStaffStaticOtpEnabled() {
+        return staffStaticOtpEnabled;
+    }
+
+    public void setStaffStaticOtpEnabled(boolean staffStaticOtpEnabled) {
+        this.staffStaticOtpEnabled = staffStaticOtpEnabled;
+    }
+
+    public String getStaffTestOtp() {
+        return staffTestOtp;
+    }
+
+    public void setStaffTestOtp(String staffTestOtp) {
+        this.staffTestOtp = staffTestOtp;
+    }
+
+    public int getCustomerOtpValidityMinutes() {
+        return customerOtpValidityMinutes;
+    }
+
+    public void setCustomerOtpValidityMinutes(int customerOtpValidityMinutes) {
+        this.customerOtpValidityMinutes = customerOtpValidityMinutes;
+    }
+
+    public int getCustomerMaxAttempts() {
+        return customerMaxAttempts;
+    }
+
+    public void setCustomerMaxAttempts(int customerMaxAttempts) {
+        this.customerMaxAttempts = customerMaxAttempts;
+    }
+
+    public boolean isStaffUser(User user) {
+        if (user == null) return false;
+        return user.isStaff();
+    }
+
+    public boolean isCustomerUser(User user) {
+        if (user == null) return false;
+        return user.isCustomer();
+    }
+
+    private void enforceRateLimit(Long userId) {
+        Instant now = Instant.now();
+        if (lastCreationTimeByUser.size() > 500) {
+            lastCreationTimeByUser.entrySet().removeIf(e -> Duration.between(e.getValue(), now).getSeconds() > 60);
+        }
+
+        Instant lastCreation = lastCreationTimeByUser.get(userId);
+        if (lastCreation != null && Duration.between(lastCreation, now).getSeconds() < 5) {
+            throw new IllegalStateException("Please wait before requesting another authentication challenge");
+        }
+        lastCreationTimeByUser.put(userId, now);
+    }
+
+    public String hashOtp(String otp) {
+        if (otp == null) return null;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(otp.trim().getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
+
+    public boolean verifyHashedOtp(String inputOtp, String storedHash) {
+        if (inputOtp == null || storedHash == null) {
+            return false;
+        }
+        String inputHash = hashOtp(inputOtp.trim());
+        return MessageDigest.isEqual(inputHash.getBytes(StandardCharsets.UTF_8),
+                                     storedHash.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String generateCustomerDynamicOtp() {
+        String otp;
+        do {
+            int val = secureRandom.nextInt(1_000_000);
+            otp = String.format("%06d", val);
+        } while (staffTestOtp != null && otp.equals(staffTestOtp.trim()));
+        return otp;
+    }
+
+    @Transactional
+    public MfaChallenge createStaffChallenge(User user, HttpServletRequest request) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null for MFA challenge");
+        }
+        enforceRateLimit(user.getId());
+
+        String type = staffStaticOtpEnabled ? "STAFF_STATIC" : "TOTP";
+        String challengeToken = UUID.randomUUID().toString();
+        Instant expiryTime = Instant.now().plus(CHALLENGE_VALIDITY);
+
+        MfaChallenge challenge = new MfaChallenge(user, challengeToken, type, expiryTime);
+        challengeRepo.save(challenge);
+
+        // For staff test OTP verification, do NOT send email or SMS
+        auditService.logMfaChallengeCreated(user.getEmail(), request);
+        return challenge;
+    }
+
+    @Transactional
+    public MfaChallenge createCustomerChallenge(User user, HttpServletRequest request) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null for MFA challenge");
+        }
+        enforceRateLimit(user.getId());
+
+        String challengeToken = UUID.randomUUID().toString();
+        Instant expiryTime = Instant.now().plus(Duration.ofMinutes(customerOtpValidityMinutes));
+
+        String rawOtp = generateCustomerDynamicOtp();
+        String hashedOtp = hashOtp(rawOtp);
+
+        MfaChallenge challenge = new MfaChallenge(user, challengeToken, "DYNAMIC_EMAIL", expiryTime);
+        challenge.setHashedOtpCode(hashedOtp);
+        challengeRepo.save(challenge);
+
+        // Deliver dynamic OTP via customer verification channel
+        boolean delivered = customerOtpDeliveryService.deliverOtp(user, rawOtp, challengeToken, request);
+        if (!delivered) {
+            // Do NOT bypass customer MFA if OTP delivery fails!
+            throw new OtpDeliveryException("Failed to deliver dynamic OTP to customer verification channel");
+        }
+
+        auditService.logMfaChallengeCreated(user.getEmail(), request);
+        return challenge;
     }
 
     @Transactional
@@ -51,17 +208,22 @@ public class MfaService {
             throw new IllegalArgumentException("User cannot be null for MFA challenge");
         }
 
-        // Rate limiting: prevent spamming challenge creation (minimum 5 seconds between creations)
-        Instant now = Instant.now();
-        if (lastCreationTimeByUser.size() > 500) {
-            lastCreationTimeByUser.entrySet().removeIf(e -> Duration.between(e.getValue(), now).getSeconds() > 60);
+        // Intelligently route by trusted backend user role
+        if (isCustomerUser(user)) {
+            if ("DYNAMIC_EMAIL".equalsIgnoreCase(preferredType) || "DYNAMIC_EMAIL".equalsIgnoreCase(user.getMfaType())) {
+                return createCustomerChallenge(user, request);
+            }
+            // Customer using TOTP Authenticator app (fall through to TOTP challenge generation below)
         }
 
-        Instant lastCreation = lastCreationTimeByUser.get(user.getId());
-        if (lastCreation != null && Duration.between(lastCreation, now).getSeconds() < 5) {
-            throw new IllegalStateException("Please wait before requesting another authentication challenge");
+        if (isStaffUser(user)) {
+            if (staffStaticOtpEnabled) {
+                return createStaffChallenge(user, request);
+            }
         }
-        lastCreationTimeByUser.put(user.getId(), now);
+
+        // Standard TOTP / SMS fallback
+        enforceRateLimit(user.getId());
 
         String type = preferredType != null ? preferredType : user.getMfaType();
         if (type == null || !providers.containsKey(type)) {
@@ -70,7 +232,6 @@ public class MfaService {
 
         MfaProvider provider = providers.get(type);
         if (provider == null || !provider.isAvailable()) {
-            // Fallback to TOTP if requested provider is unavailable
             type = "TOTP";
             provider = providers.get(type);
         }
@@ -102,10 +263,15 @@ public class MfaService {
 
         MfaChallenge challenge = optionalChallenge.get();
         User user = challenge.getUser();
+        if (user != null && user.getId() != null) {
+            user = userRepository.findById(user.getId()).orElse(user);
+        }
         String username = user != null ? user.getEmail() : "UNKNOWN";
 
+        int maxAttempts = isCustomerUser(user) ? customerMaxAttempts : MAX_MFA_ATTEMPTS;
+
         // 1. Check if already locked
-        if (challenge.isLocked() || challenge.getAttemptCount() >= MAX_MFA_ATTEMPTS) {
+        if (challenge.isLocked() || challenge.getAttemptCount() >= maxAttempts) {
             challenge.setLocked(true);
             challengeRepo.save(challenge);
             auditService.logMfaLocked(username, request);
@@ -118,17 +284,51 @@ public class MfaService {
             return MfaVerificationResult.failure("CHALLENGE_ALREADY_USED", "Challenge has already been used. Please login again.", 0);
         }
 
-        // 3. Check expiry (5 minutes)
+        // 3. Check expiry
         if (challenge.isExpired()) {
             auditService.logMfaFailure(username, request, "CHALLENGE_EXPIRED");
             return MfaVerificationResult.failure("CHALLENGE_EXPIRED", "Authentication challenge has expired. Please login again.", 0);
         }
 
-        // 4. Verify code using corresponding provider
-        MfaProvider provider = providers.get(challenge.getMfaType());
+        String trimmedCode = inputCode != null ? inputCode.trim() : "";
         boolean codeValid = false;
-        if (provider != null && inputCode != null) {
-            codeValid = provider.verify(user, inputCode.trim());
+
+        boolean isStaff = isStaffUser(user);
+        boolean isCustomer = isCustomerUser(user);
+
+        if (isCustomer) {
+            // Customer Verification Flow:
+            // CRITICAL: Reject static staff OTP for customer accounts!
+            if (staffTestOtp != null && !staffTestOtp.isBlank() && staffTestOtp.equals(trimmedCode)) {
+                log.warn("Customer account {} attempted to use staff static test OTP. Rejected.", DataMaskingUtils.maskEmail(username));
+                codeValid = false;
+            } else if ("DYNAMIC_EMAIL".equals(challenge.getMfaType()) && challenge.getHashedOtpCode() != null && !trimmedCode.isEmpty()) {
+                codeValid = verifyHashedOtp(trimmedCode, challenge.getHashedOtpCode());
+            } else {
+                // TOTP Authenticator Provider (Google Authenticator, Microsoft Authenticator)
+                MfaProvider totpProvider = providers.get("TOTP");
+                if (totpProvider != null && !trimmedCode.isEmpty()) {
+                    codeValid = totpProvider.verify(user, trimmedCode);
+                }
+            }
+        } else if (isStaff) {
+            // Staff Verification Flow:
+            // Check static test OTP if enabled
+            if (staffStaticOtpEnabled && staffTestOtp != null && !staffTestOtp.isBlank() && staffTestOtp.equals(trimmedCode)) {
+                codeValid = true;
+            } else {
+                // Check TOTP provider if enrolled
+                MfaProvider totpProvider = providers.get("TOTP");
+                if (totpProvider != null && !trimmedCode.isEmpty()) {
+                    codeValid = totpProvider.verify(user, trimmedCode);
+                }
+            }
+        } else {
+            // Fallback for any other provider type
+            MfaProvider provider = providers.get(challenge.getMfaType());
+            if (provider != null && !trimmedCode.isEmpty()) {
+                codeValid = provider.verify(user, trimmedCode);
+            }
         }
 
         if (codeValid) {
@@ -141,15 +341,15 @@ public class MfaService {
             int newAttempts = challenge.getAttemptCount() + 1;
             challenge.setAttemptCount(newAttempts);
 
-            if (newAttempts >= MAX_MFA_ATTEMPTS) {
+            if (newAttempts >= maxAttempts) {
                 challenge.setLocked(true);
                 challengeRepo.save(challenge);
                 auditService.logMfaLocked(username, request);
-                return MfaVerificationResult.failure("CHALLENGE_LOCKED", "Challenge locked due to 3 incorrect attempts. Please login again.", 0);
+                return MfaVerificationResult.failure("CHALLENGE_LOCKED", "Challenge locked due to " + maxAttempts + " incorrect attempts. Please login again.", 0);
             }
 
             challengeRepo.save(challenge);
-            int remaining = MAX_MFA_ATTEMPTS - newAttempts;
+            int remaining = maxAttempts - newAttempts;
             auditService.logMfaFailure(username, request, "INVALID_CODE");
             return MfaVerificationResult.failure("INVALID_CODE", "Invalid authentication code. " + remaining + " attempts remaining.", remaining);
         }

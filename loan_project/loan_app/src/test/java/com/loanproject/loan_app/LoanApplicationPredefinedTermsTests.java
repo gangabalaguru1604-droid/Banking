@@ -126,10 +126,12 @@ public class LoanApplicationPredefinedTermsTests {
 
         Loan latestLoan = loans.get(0);
         assertEquals(applyAmount, latestLoan.getAmount(), 0.001);
-        assertEquals(loanService.getDefaultInterestRate(), latestLoan.getInterest(), 0.001,
-                "Loan must use server predefined interest rate: " + loanService.getDefaultInterestRate());
-        assertEquals(loanService.getDefaultTenureMonths(), latestLoan.getMonths(),
-                "Loan must use server predefined tenure: " + loanService.getDefaultTenureMonths());
+
+        com.loanproject.loan_app.policy.LoanSlab expectedSlab = loanService.getSlabForAmount(applyAmount);
+        assertEquals(expectedSlab.getInterestRate(), latestLoan.getInterest(), 0.001,
+                "Loan must use dynamically resolved interest rate for amount: " + expectedSlab.getInterestRate());
+        assertEquals(expectedSlab.getTenureMonths(), latestLoan.getMonths(),
+                "Loan must use dynamically resolved tenure for amount: " + expectedSlab.getTenureMonths());
 
         // Validate server EMI calculation formula matches predefined terms
         double r = latestLoan.getInterest() / (12 * 100);
@@ -161,9 +163,10 @@ public class LoanApplicationPredefinedTermsTests {
         assertNotEquals(maliciousInterest, latestLoan.getInterest(), "Attacker's interest rate must be rejected");
         assertNotEquals(maliciousTenure, latestLoan.getMonths(), "Attacker's tenure must be rejected");
 
-        // Verify server-side predefined terms were strictly enforced
-        assertEquals(loanService.getDefaultInterestRate(), latestLoan.getInterest(), 0.001);
-        assertEquals(loanService.getDefaultTenureMonths(), latestLoan.getMonths());
+        // Verify server-side dynamic policy slab terms were strictly enforced
+        com.loanproject.loan_app.policy.LoanSlab expectedSlab = loanService.getSlabForAmount(applyAmount);
+        assertEquals(expectedSlab.getInterestRate(), latestLoan.getInterest(), 0.001);
+        assertEquals(expectedSlab.getTenureMonths(), latestLoan.getMonths());
     }
 
     @Test
@@ -218,8 +221,9 @@ public class LoanApplicationPredefinedTermsTests {
         List<Loan> loans = loanRepository.findByUserOrderByCreatedAtDesc(testCustomer);
         Loan latestLoan = loans.get(0);
 
+        com.loanproject.loan_app.policy.LoanSlab expectedSlab = loanService.getSlabForAmount(staffAmount);
         assertEquals(staffAmount, latestLoan.getAmount(), 0.001);
-        assertEquals(loanService.getDefaultInterestRate(), latestLoan.getInterest(), 0.001);
-        assertEquals(loanService.getDefaultTenureMonths(), latestLoan.getMonths());
+        assertEquals(expectedSlab.getInterestRate(), latestLoan.getInterest(), 0.001);
+        assertEquals(expectedSlab.getTenureMonths(), latestLoan.getMonths());
     }
 }

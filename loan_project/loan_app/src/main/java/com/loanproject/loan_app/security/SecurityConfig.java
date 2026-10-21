@@ -59,7 +59,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**", "/api/loans/**"))
             .authenticationProvider(authenticationProvider())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -74,12 +74,14 @@ public class SecurityConfig {
                     "/index.html",
                     "/assets/**",
                     "/api/auth/**",
+                    "/api/loan-policy/**",
                     "/login",
                     "/register",
                     "/forgot-password",
                     "/reset-password",
                     "/mfa-verify",
                     "/mfa-enroll",
+                    "/mfa-resend",
                     "/session/keep-alive",
                     "/health",
                     "/ping",
@@ -107,7 +109,20 @@ public class SecurityConfig {
                 .requestMatchers("/staff/collections/record").hasAnyRole("COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
 
                 // Loan search, customer profile, and 360 degree details: Loan Officers, Collections staff, Admins
-                .requestMatchers("/loan-search", "/loan-search/**", "/customer-profile", "/customer-profile/**", "/loan-details", "/loan-details/**").hasAnyRole("LOAN_OFFICER", "COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
+                .requestMatchers(
+                    "/loan-search", "/loan-search/**",
+                    "/customer-profile", "/customer-profile/**",
+                    "/loan-details", "/loan-details/**",
+                    "/total-loans", "/total-loans/**",
+                    "/all-loans", "/all-loans/**",
+                    "/active-borrowers", "/active-borrowers/**",
+                    "/staff/loans", "/staff/loans/**",
+                    "/staff/total-loans", "/staff/total-loans/**",
+                    "/staff/active-borrowers", "/staff/active-borrowers/**",
+                    "/staff/borrowers", "/staff/borrowers/**",
+                    "/api/staff/**",
+                    "/api/loans/**"
+                ).hasAnyRole("LOAN_OFFICER", "COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
 
                 // Dashboard
                 .requestMatchers("/dashboard").authenticated()

@@ -18,6 +18,12 @@ public class StaffDashboardLoanDto {
     private String customerId;
     private String maskedPhone;
     private String createdAt;
+    private String productType = "Personal Loan";
+    private String startDate;
+    private String borrowerName;
+    private String rawEmail;
+    private String rawPhone;
+    private Long userId;
 
     public StaffDashboardLoanDto() {
     }
@@ -42,6 +48,7 @@ public class StaffDashboardLoanDto {
         this.remaining = remaining;
         this.status = status;
         this.branch = branch;
+        this.borrowerName = borrowerName;
         this.user = new BorrowerSummary(borrowerName, maskedEmail);
         this.repaymentStatus = repaymentStatus;
         this.dpd = dpd;
@@ -49,6 +56,7 @@ public class StaffDashboardLoanDto {
         this.customerId = customerId;
         this.maskedPhone = maskedPhone;
         this.createdAt = createdAt;
+        this.startDate = createdAt;
     }
 
     public Long getLoanId() {
@@ -177,6 +185,57 @@ public class StaffDashboardLoanDto {
 
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getProductType() {
+        return productType != null ? productType : "Personal Loan";
+    }
+
+    public void setProductType(String productType) {
+        this.productType = productType;
+    }
+
+    public String getStartDate() {
+        return startDate != null ? startDate : (createdAt != null ? createdAt : "N/A");
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
+    public String getBorrowerName() {
+        return borrowerName != null ? borrowerName : (user != null ? user.getName() : "Unknown");
+    }
+
+    public void setBorrowerName(String borrowerName) {
+        this.borrowerName = borrowerName;
+        if (this.user != null) {
+            this.user.setName(borrowerName);
+        }
+    }
+
+    public String getRawEmail() {
+        return rawEmail;
+    }
+
+    public void setRawEmail(String rawEmail) {
+        this.rawEmail = rawEmail;
+    }
+
+    public String getRawPhone() {
+        return rawPhone;
+    }
+
+    public void setRawPhone(String rawPhone) {
+        this.rawPhone = rawPhone;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public static class BorrowerSummary {

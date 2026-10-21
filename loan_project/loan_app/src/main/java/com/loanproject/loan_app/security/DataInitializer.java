@@ -7,6 +7,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 import com.loanproject.loan_app.bean.AppRole;
 import com.loanproject.loan_app.bean.User;
 import com.loanproject.loan_app.bean.UserType;
@@ -61,31 +63,77 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Initialized default administrator: {} (MFA Secret: {})", adminEmail, seedSecret);
         }
 
-        // Seed default staff accounts for development if not present
-        seedStaffIfMissing("Loan Officer", "officer@bank.com", "Officer@Bank123!", AppRole.ROLE_LOAN_OFFICER, "MAIN");
-        seedStaffIfMissing("Collections Agent", "collector@bank.com", "Collector@Bank123!", AppRole.ROLE_COLLECTIONS_AGENT, "MAIN");
-        seedStaffIfMissing("Collections Manager", "manager@bank.com", "Manager@Bank123!", AppRole.ROLE_COLLECTIONS_MANAGER, "MAIN");
+        // Ensure default staff accounts for development
+        ensureStaffAccount("Loan Officer", "officer@bank.com", "Officer@Bank123!", AppRole.ROLE_LOAN_OFFICER, "MAIN");
+        ensureStaffAccount("Collections Agent", "collector@bank.com", "Collector@Bank123!", AppRole.ROLE_COLLECTIONS_AGENT, "MAIN");
+        ensureStaffAccount("Collections Manager", "manager@bank.com", "Manager@Bank123!", AppRole.ROLE_COLLECTIONS_MANAGER, "MAIN");
+
+        // Ensure default customer account for MFA testing
+        ensureCustomerAccount("Demo Customer", "customer@bank.com", "Customer@Bank123!", "MAIN");
     }
 
-    private void seedStaffIfMissing(String name, String email, String password, AppRole role, String branch) {
-        if (userRepository.findByEmail(email).isEmpty()) {
+    private void ensureStaffAccount(String name, String email, String password, AppRole role, String branch) {
+        String cleanEmail = email.trim().toLowerCase();
+        Optional<User> optionalStaff = userRepository.findByEmail(cleanEmail);
+        String seedSecret = "JBSWY3DPEHPK3PXP";
+
+        if (optionalStaff.isEmpty()) {
             User staff = new User();
             staff.setName(name);
-            staff.setEmail(email.trim().toLowerCase());
+            staff.setEmail(cleanEmail);
             staff.setPassword(passwordEncoder.encode(password));
             staff.setRole(role);
             staff.setUserType(UserType.STAFF);
             staff.setAccountNonLocked(true);
             staff.setFailedAttemptCount(0);
             staff.setBranch(branch != null ? branch : "MAIN");
-
-            // Staff starts unenrolled so they complete QR code enrollment on first login
-            staff.setMfaSecret(null);
-            staff.setMfaEnrolled(false);
-            staff.setMfaType("TOTP");
+            staff.setMfaSecret(encryptionService.encrypt(seedSecret));
+            staff.setMfaEnrolled(true);
+            staff.setMfaType("STAFF_STATIC");
 
             userRepository.save(staff);
-            log.info("Initialized staff account: {} with role {} at branch {}", email, role, branch);
+            log.info("Initialized staff account: {} with role {} at branch {}", cleanEmail, role, branch);
+        } else {
+            User staff = optionalStaff.get();
+            if (!staff.isMfaEnrolled() || staff.getMfaSecret() == null || staff.getMfaSecret().isBlank()) {
+                staff.setMfaSecret(encryptionService.encrypt(seedSecret));
+                staff.setMfaEnrolled(true);
+                userRepository.save(staff);
+                log.info("Updated staff account {} to mfaEnrolled=true for static test MFA flow", cleanEmail);
+            }
+        }
+    }
+
+    private void ensureCustomerAccount(String name, String email, String password, String branch) {
+        String cleanEmail = email.trim().toLowerCase();
+        Optional<User> optionalCustomer = userRepository.findByEmail(cleanEmail);
+
+        if (optionalCustomer.isEmpty()) {
+            User customer = new User();
+            customer.setName(name);
+            customer.setEmail(cleanEmail);
+            customer.setPassword(passwordEncoder.encode(password));
+            customer.setRole(AppRole.ROLE_CUSTOMER);
+            customer.setUserType(UserType.CUSTOMER);
+            customer.setAccountNonLocked(true);
+            customer.setFailedAttemptCount(0);
+            customer.setBranch(branch != null ? branch : "MAIN");
+            customer.setCustomerId("CUST" + String.format("%04d", (int)(Math.random() * 9000) + 1000));
+            customer.setPhoneNumber("9876543210");
+            customer.setMfaType("TOTP");
+            customer.setMfaEnrolled(false);
+            customer.setMfaSecret(null);
+
+            userRepository.save(customer);
+            log.info("Initialized default customer account: {} ready for Authenticator QR code scan", cleanEmail);
+        } else {
+            User customer = optionalCustomer.get();
+            // Reset customer to unenrolled TOTP so user can scan QR code with Google Authenticator
+            customer.setMfaType("TOTP");
+            customer.setMfaEnrolled(false);
+            customer.setMfaSecret(null);
+            userRepository.save(customer);
+            log.info("Reset customer account {} to unenrolled TOTP so user can scan Authenticator QR code", cleanEmail);
         }
     }
 

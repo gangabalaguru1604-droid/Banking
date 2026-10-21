@@ -3,6 +3,7 @@ package com.loanproject.loan_app.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,10 +12,13 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.loanproject.loan_app.bean.AppRole;
 import com.loanproject.loan_app.bean.Loan;
 import com.loanproject.loan_app.bean.User;
+import com.loanproject.loan_app.dto.ActiveBorrowerDto;
+import com.loanproject.loan_app.dto.StaffDashboardLoanDto;
 import com.loanproject.loan_app.security.CustomUserDetails;
 import com.loanproject.loan_app.services.LoanService;
 import com.loanproject.loan_app.services.UserService;
@@ -177,7 +181,27 @@ public class LoanController {
                 } catch (Exception ignored) {}
             }
 
+            List<com.loanproject.loan_app.dto.ActiveBorrowerDto> activeBorrowers = buildActiveBorrowers(rawBranchLoans, u);
+            int activeBorrowersCount = activeBorrowers.size();
+
+            List<String> allBranches = staffLoans.stream()
+                    .map(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getBranch)
+                    .filter(b -> b != null && !b.isBlank())
+                    .distinct()
+                    .sorted()
+                    .toList();
+
+            List<String> allStatuses = staffLoans.stream()
+                    .map(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getStatus)
+                    .filter(st -> st != null && !st.isBlank())
+                    .distinct()
+                    .sorted()
+                    .toList();
+
             m.addAttribute("loans", staffLoans);
+            m.addAttribute("activeBorrowers", activeBorrowers);
+            m.addAttribute("allBranches", allBranches);
+            m.addAttribute("allStatuses", allStatuses);
             m.addAttribute("pendingLoans", pendingLoans);
             m.addAttribute("delinquentLoans", delinquentLoans);
             m.addAttribute("activeLoans", activeLoans);
@@ -188,6 +212,7 @@ public class LoanController {
             m.addAttribute("totalOverdueAmount", totalOverdueAmount);
             m.addAttribute("totalLoansCount", totalLoansCount);
             m.addAttribute("activeLoansCount", activeLoansCount);
+            m.addAttribute("activeBorrowersCount", activeBorrowersCount);
             m.addAttribute("closedLoansCount", closedLoansCount);
             m.addAttribute("pendingLoansCount", pendingLoansCount);
             m.addAttribute("overdueLoansCount", overdueLoansCount);
@@ -222,6 +247,7 @@ public class LoanController {
         }
 
         m.addAttribute("currentUser", u);
+        m.addAttribute("loanSlabs", service.getLoanSlabs());
         m.addAttribute("defaultInterestRate", service.getDefaultInterestRate());
         m.addAttribute("defaultTenureMonths", service.getDefaultTenureMonths());
         m.addAttribute("minLoanAmount", service.getMinAmount());
@@ -245,9 +271,12 @@ public class LoanController {
         // Validate amount against configured limits
         service.validateLoanAmount(amount);
 
+        // Dynamically resolve applicable slab for this amount from server bank policy
+        com.loanproject.loan_app.policy.LoanSlab applicableSlab = service.getSlabForAmount(amount);
+
         User targetUser;
-        double effectiveInterest = service.getDefaultInterestRate();
-        int effectiveTenure = service.getDefaultTenureMonths();
+        double effectiveInterest = applicableSlab.getInterestRate();
+        int effectiveTenure = applicableSlab.getTenureMonths();
 
         if (u.getRole() == AppRole.ROLE_LOAN_OFFICER || u.getRole() == AppRole.ROLE_ADMIN) {
             if (customerEmail == null || customerEmail.trim().isEmpty()) {
@@ -267,16 +296,48 @@ public class LoanController {
         } else if (u.getRole() == AppRole.ROLE_CUSTOMER) {
             // Customer self-service:
             // SECURITY: Never trust interest rate or tenure submitted by client.
-            // Client interest & tenure parameters are strictly ignored and server-side values enforced.
+            // Client interest & tenure parameters are strictly ignored and server-side policy slab values enforced.
             targetUser = u;
-            effectiveInterest = service.getDefaultInterestRate();
-            effectiveTenure = service.getDefaultTenureMonths();
+            effectiveInterest = applicableSlab.getInterestRate();
+            effectiveTenure = applicableSlab.getTenureMonths();
         } else {
             throw new AccessDeniedException("Unauthorized to originate loans.");
         }
 
         service.apply(targetUser, amount, effectiveInterest, effectiveTenure);
         return "redirect:/dashboard";
+    }
+
+    @GetMapping("/api/loan-policy/slabs")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public List<com.loanproject.loan_app.policy.LoanSlab> getLoanSlabs() {
+        return service.getLoanSlabs();
+    }
+
+    @GetMapping("/api/loan-policy/quote")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public org.springframework.http.ResponseEntity<?> getLoanQuote(@RequestParam("amount") double amount) {
+        try {
+            service.validateLoanAmount(amount);
+            com.loanproject.loan_app.policy.LoanSlab slab = service.getSlabForAmount(amount);
+            double emi = service.getLoanPolicyService() != null ?
+                    service.getLoanPolicyService().calculateEmi(amount, slab.getInterestRate(), slab.getTenureMonths()) :
+                    0.0;
+            java.util.Map<String, Object> res = new java.util.HashMap<>();
+            res.put("valid", true);
+            res.put("amount", amount);
+            res.put("slabName", slab.getSlabName());
+            res.put("interestRate", slab.getInterestRate());
+            res.put("tenureMonths", slab.getTenureMonths());
+            res.put("emi", emi);
+            res.put("totalRepayment", Math.round(emi * slab.getTenureMonths() * 100.0) / 100.0);
+            return org.springframework.http.ResponseEntity.ok(res);
+        } catch (IllegalArgumentException e) {
+            java.util.Map<String, Object> err = new java.util.HashMap<>();
+            err.put("valid", false);
+            err.put("message", e.getMessage());
+            return org.springframework.http.ResponseEntity.badRequest().body(err);
+        }
     }
 
     @GetMapping("/payPage")
@@ -570,7 +631,7 @@ public class LoanController {
             }
         }
 
-        return new com.loanproject.loan_app.dto.StaffDashboardLoanDto(
+        com.loanproject.loan_app.dto.StaffDashboardLoanDto dto = new com.loanproject.loan_app.dto.StaffDashboardLoanDto(
                 l.getLoanId(),
                 l.getAccountNumber() != null ? l.getAccountNumber() : String.format("LN%010d", l.getLoanId()),
                 borrowerName,
@@ -589,5 +650,265 @@ public class LoanController {
                 maskedPhone,
                 createdAt
         );
+        dto.setProductType(l.getProductType() != null ? l.getProductType() : "Personal Loan");
+        String startOrDisbursementDate = l.getDisbursementDate() != null
+                ? l.getDisbursementDate().toString()
+                : (l.getCreatedAt() != null ? java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(java.time.ZoneId.systemDefault()).format(l.getCreatedAt()) : "N/A");
+        dto.setStartDate(startOrDisbursementDate);
+        dto.setBorrowerName(borrowerName);
+        dto.setRawEmail(rawEmail);
+        dto.setRawPhone(l.getUser() != null ? l.getUser().getPhoneNumber() : "");
+        dto.setUserId(l.getUser() != null ? l.getUser().getId() : null);
+        return dto;
+    }
+
+    public List<com.loanproject.loan_app.dto.ActiveBorrowerDto> buildActiveBorrowers(List<Loan> authorizedLoans, User currentStaff) {
+        if (authorizedLoans == null || authorizedLoans.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        // Filter active loans only
+        List<Loan> activeLoans = authorizedLoans.stream()
+                .filter(l -> "ACTIVE".equalsIgnoreCase(l.getStatus()))
+                .toList();
+
+        // Group by borrower identifier key to avoid duplicate records
+        java.util.Map<String, List<Loan>> borrowerGroups = new java.util.LinkedHashMap<>();
+        for (Loan l : activeLoans) {
+            String key;
+            if (l.getUser() != null && l.getUser().getId() != null) {
+                key = "UID_" + l.getUser().getId();
+            } else if (l.getUser() != null && l.getUser().getCustomerId() != null && !l.getUser().getCustomerId().isBlank()) {
+                key = "CUST_" + l.getUser().getCustomerId().trim();
+            } else if (l.getUser() != null && l.getUser().getEmail() != null && !l.getUser().getEmail().isBlank()) {
+                key = "EMAIL_" + l.getUser().getEmail().trim().toLowerCase();
+            } else {
+                key = "LOAN_" + l.getLoanId();
+            }
+            borrowerGroups.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(l);
+        }
+
+        boolean canViewFullContact = currentStaff != null && 
+                (currentStaff.getRole() == AppRole.ROLE_ADMIN || currentStaff.getRole() == AppRole.ROLE_LOAN_OFFICER);
+
+        List<com.loanproject.loan_app.dto.ActiveBorrowerDto> result = new java.util.ArrayList<>();
+        for (List<Loan> loans : borrowerGroups.values()) {
+            if (loans.isEmpty()) continue;
+            Loan first = loans.get(0);
+            User u = first.getUser();
+
+            String borrowerName = u != null ? u.getName() : "Unknown";
+            String customerId = (u != null && u.getCustomerId() != null && !u.getCustomerId().isBlank())
+                    ? u.getCustomerId()
+                    : (u != null && u.getId() != null ? "CUST" + u.getId() : "CUST" + first.getLoanId());
+            String rawEmail = u != null ? u.getEmail() : "";
+            String rawPhone = u != null ? u.getPhoneNumber() : "";
+
+            String displayEmail = canViewFullContact ? rawEmail : com.loanproject.loan_app.security.DataMaskingUtils.maskEmail(rawEmail);
+            String displayPhone = canViewFullContact ? rawPhone : com.loanproject.loan_app.security.DataMaskingUtils.maskPhone(rawPhone);
+            String contactInfo = displayEmail + (displayPhone != null && !displayPhone.isBlank() && !"N/A".equals(displayPhone) ? " | " + displayPhone : "");
+
+            List<String> accNums = new java.util.ArrayList<>();
+            double totalSanctioned = 0.0;
+            double totalOutstanding = 0.0;
+            String branch = first.getBranch() != null ? first.getBranch() : "MAIN";
+
+            for (Loan l : loans) {
+                String acc = l.getAccountNumber() != null ? l.getAccountNumber() : String.format("LN%010d", l.getLoanId());
+                if (!accNums.contains(acc)) {
+                    accNums.add(acc);
+                }
+                totalSanctioned += l.getAmount();
+                totalOutstanding += l.getRemaining();
+                if (l.getBranch() != null && !l.getBranch().isBlank()) {
+                    branch = l.getBranch();
+                }
+            }
+
+            com.loanproject.loan_app.dto.ActiveBorrowerDto dto = new com.loanproject.loan_app.dto.ActiveBorrowerDto(
+                    u != null ? u.getId() : null,
+                    customerId,
+                    borrowerName,
+                    accNums,
+                    loans.size(),
+                    Math.round(totalSanctioned * 100.0) / 100.0,
+                    Math.round(totalOutstanding * 100.0) / 100.0,
+                    branch,
+                    displayEmail,
+                    displayPhone,
+                    contactInfo,
+                    "ACTIVE",
+                    first.getLoanId()
+            );
+            result.add(dto);
+        }
+
+        result.sort(java.util.Comparator.comparing(com.loanproject.loan_app.dto.ActiveBorrowerDto::getBorrowerName, String.CASE_INSENSITIVE_ORDER));
+        return result;
+    }
+
+    @GetMapping({"/total-loans", "/all-loans", "/staff/loans", "/staff/total-loans"})
+    public String viewTotalLoans(@RequestParam(value = "branch", required = false) String requestedBranch,
+                                 @RequestParam(value = "status", required = false) String requestedStatus,
+                                 HttpSession s, ModelMap m) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() == AppRole.ROLE_CUSTOMER) {
+            return "redirect:/dashboard";
+        }
+
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN && ("ALL".equalsIgnoreCase(u.getBranch()) || u.getBranch() == null))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        List<Loan> rawBranchLoans = service.getAll().stream()
+                .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
+                .toList();
+
+        List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = rawBranchLoans.stream()
+                .map(this::mapToStaffLoanDto)
+                .toList();
+
+        List<String> allBranches = staffLoans.stream()
+                .map(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getBranch)
+                .filter(b -> b != null && !b.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+
+        List<String> allStatuses = staffLoans.stream()
+                .map(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getStatus)
+                .filter(st -> st != null && !st.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+
+        m.addAttribute("loans", staffLoans);
+        m.addAttribute("totalLoansCount", staffLoans.size());
+        m.addAttribute("allBranches", allBranches);
+        m.addAttribute("allStatuses", allStatuses);
+        m.addAttribute("currentUser", u);
+        m.addAttribute("userRole", u.getRole().name());
+        m.addAttribute("officerBranch", branchFilter);
+        m.addAttribute("selectedBranch", requestedBranch);
+        m.addAttribute("selectedStatus", requestedStatus);
+        return "total-loans";
+    }
+
+    @GetMapping({"/active-borrowers", "/staff/active-borrowers", "/staff/borrowers"})
+    public String viewActiveBorrowers(@RequestParam(value = "branch", required = false) String requestedBranch,
+                                      HttpSession s, ModelMap m) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() == AppRole.ROLE_CUSTOMER) {
+            return "redirect:/dashboard";
+        }
+
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN && ("ALL".equalsIgnoreCase(u.getBranch()) || u.getBranch() == null))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        List<Loan> rawBranchLoans = service.getAll().stream()
+                .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
+                .toList();
+
+        List<com.loanproject.loan_app.dto.ActiveBorrowerDto> activeBorrowers = buildActiveBorrowers(rawBranchLoans, u);
+
+        List<String> allBranches = activeBorrowers.stream()
+                .map(com.loanproject.loan_app.dto.ActiveBorrowerDto::getBranch)
+                .filter(b -> b != null && !b.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+
+        m.addAttribute("activeBorrowers", activeBorrowers);
+        m.addAttribute("activeBorrowersCount", activeBorrowers.size());
+        m.addAttribute("allBranches", allBranches);
+        m.addAttribute("currentUser", u);
+        m.addAttribute("userRole", u.getRole().name());
+        m.addAttribute("officerBranch", branchFilter);
+        m.addAttribute("selectedBranch", requestedBranch);
+        return "active-borrowers";
+    }
+
+    @GetMapping({"/api/staff/total-loans", "/api/staff/all-loans", "/api/staff/loans"})
+    @ResponseBody
+    public ResponseEntity<List<com.loanproject.loan_app.dto.StaffDashboardLoanDto>> apiTotalLoans(HttpSession s) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() == AppRole.ROLE_CUSTOMER) {
+            throw new AccessDeniedException("Unauthorized: Customers cannot access staff loan lists.");
+        }
+
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN && ("ALL".equalsIgnoreCase(u.getBranch()) || u.getBranch() == null))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = service.getAll().stream()
+                .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
+                .map(this::mapToStaffLoanDto)
+                .toList();
+
+        return ResponseEntity.ok(staffLoans);
+    }
+
+    @GetMapping({"/api/staff/active-borrowers", "/api/staff/borrowers"})
+    @ResponseBody
+    public ResponseEntity<List<com.loanproject.loan_app.dto.ActiveBorrowerDto>> apiActiveBorrowers(HttpSession s) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() == AppRole.ROLE_CUSTOMER) {
+            throw new AccessDeniedException("Unauthorized: Customers cannot access staff borrower lists.");
+        }
+
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN && ("ALL".equalsIgnoreCase(u.getBranch()) || u.getBranch() == null))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        List<Loan> rawBranchLoans = service.getAll().stream()
+                .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
+                .toList();
+
+        List<com.loanproject.loan_app.dto.ActiveBorrowerDto> activeBorrowers = buildActiveBorrowers(rawBranchLoans, u);
+        return ResponseEntity.ok(activeBorrowers);
+    }
+
+    @GetMapping("/api/staff/dashboard-summary")
+    @ResponseBody
+    public ResponseEntity<java.util.Map<String, Object>> apiDashboardSummary(HttpSession s) {
+        User u = getAuthenticatedUser(s);
+        if (u.getRole() == AppRole.ROLE_CUSTOMER) {
+            throw new AccessDeniedException("Unauthorized: Customers cannot access staff dashboard summary.");
+        }
+
+        String branchFilter = (u.getRole() == AppRole.ROLE_ADMIN && ("ALL".equalsIgnoreCase(u.getBranch()) || u.getBranch() == null))
+                ? "ALL"
+                : (u.getBranch() != null ? u.getBranch() : "MAIN");
+
+        List<Loan> rawBranchLoans = service.getAll().stream()
+                .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
+                .toList();
+
+        List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = rawBranchLoans.stream()
+                .map(this::mapToStaffLoanDto)
+                .toList();
+
+        List<com.loanproject.loan_app.dto.ActiveBorrowerDto> activeBorrowers = buildActiveBorrowers(rawBranchLoans, u);
+
+        int totalLoansCount = staffLoans.size();
+        int activeLoansCount = (int) staffLoans.stream().filter(l -> "ACTIVE".equalsIgnoreCase(l.getStatus())).count();
+        int activeBorrowersCount = activeBorrowers.size();
+        int pendingLoansCount = (int) staffLoans.stream().filter(l -> "PENDING".equalsIgnoreCase(l.getStatus())
+                || "SUBMITTED".equalsIgnoreCase(l.getStatus())
+                || "IN_REVIEW".equalsIgnoreCase(l.getStatus())
+                || "APPLIED".equalsIgnoreCase(l.getStatus())).count();
+        double totalPrincipal = staffLoans.stream().mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getAmount).sum();
+        double totalRemaining = staffLoans.stream().mapToDouble(com.loanproject.loan_app.dto.StaffDashboardLoanDto::getRemaining).sum();
+
+        java.util.Map<String, Object> summary = new java.util.HashMap<>();
+        summary.put("totalLoansCount", totalLoansCount);
+        summary.put("activeLoansCount", activeLoansCount);
+        summary.put("activeBorrowersCount", activeBorrowersCount);
+        summary.put("pendingLoansCount", pendingLoansCount);
+        summary.put("totalPrincipal", totalPrincipal);
+        summary.put("totalRemaining", totalRemaining);
+        summary.put("branch", branchFilter);
+        return ResponseEntity.ok(summary);
     }
 }

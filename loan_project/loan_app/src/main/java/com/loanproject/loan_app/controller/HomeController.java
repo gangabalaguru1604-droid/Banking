@@ -11,6 +11,7 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,8 +23,10 @@ import com.loanproject.loan_app.repository.UserRepository;
 import com.loanproject.loan_app.security.AesGcmEncryptionService;
 import com.loanproject.loan_app.security.AuthAuditService;
 import com.loanproject.loan_app.security.CustomUserDetails;
+import com.loanproject.loan_app.security.DataMaskingUtils;
 import com.loanproject.loan_app.security.MfaService;
 import com.loanproject.loan_app.security.MfaVerificationResult;
+import com.loanproject.loan_app.security.OtpDeliveryException;
 import com.loanproject.loan_app.security.PasswordResetService;
 import com.loanproject.loan_app.security.QrCodeService;
 import com.loanproject.loan_app.security.TotpService;
@@ -46,6 +49,7 @@ public class HomeController {
     private final AesGcmEncryptionService encryptionService;
     private final UserRepository userRepository;
     private final AuthAuditService auditService;
+    private final com.loanproject.loan_app.security.CustomerOtpDeliveryService customerOtpDeliveryService;
 
     public HomeController(UserService userService,
                           MfaService mfaService,
@@ -54,7 +58,8 @@ public class HomeController {
                           TotpService totpService,
                           AesGcmEncryptionService encryptionService,
                           UserRepository userRepository,
-                          AuthAuditService auditService) {
+                          AuthAuditService auditService,
+                          com.loanproject.loan_app.security.CustomerOtpDeliveryService customerOtpDeliveryService) {
         this.userService = userService;
         this.mfaService = mfaService;
         this.passwordResetService = passwordResetService;
@@ -63,6 +68,7 @@ public class HomeController {
         this.encryptionService = encryptionService;
         this.userRepository = userRepository;
         this.auditService = auditService;
+        this.customerOtpDeliveryService = customerOtpDeliveryService;
     }
 
     @GetMapping("/")
@@ -84,8 +90,11 @@ public class HomeController {
                         @RequestParam(value = "logout", required = false) String logout,
                         @RequestParam(value = "expired", required = false) String expired,
                         @RequestParam(value = "resetSuccess", required = false) String resetSuccess,
+                        @RequestParam(value = "mfaDeliveryError", required = false) String mfaDeliveryError,
                         ModelMap model) {
-        if (error != null) {
+        if (mfaDeliveryError != null) {
+            model.addAttribute("errorMessage", "Unable to deliver dynamic authentication code. Please try logging in again or contact customer support.");
+        } else if (error != null) {
             model.addAttribute("errorMessage", "Invalid credentials or account unavailable.");
         }
         if (logout != null) {
@@ -312,6 +321,23 @@ public class HomeController {
             return "redirect:/login";
         }
 
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            boolean isCust = mfaService.isCustomerUser(user);
+            boolean isStaff = mfaService.isStaffUser(user);
+            model.addAttribute("isCustomer", isCust);
+            model.addAttribute("isStaff", isStaff);
+            if (isCust && user.getEmail() != null) {
+                model.addAttribute("maskedEmail", DataMaskingUtils.maskEmail(user.getEmail()));
+                if (customerOtpDeliveryService.isSimulatedDelivery()) {
+                    String simCode = customerOtpDeliveryService.getLastDeliveredOtpForTesting(user.getEmail());
+                    if (simCode != null) {
+                        model.addAttribute("simulatedOtpCode", simCode);
+                    }
+                }
+            }
+        }
+
         model.addAttribute("mfaType", session.getAttribute("PENDING_MFA_TYPE"));
         return "mfa";
     }
@@ -362,11 +388,56 @@ public class HomeController {
                 return "redirect:/login?error=true";
             }
 
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                boolean isCust = mfaService.isCustomerUser(user);
+                boolean isStaff = mfaService.isStaffUser(user);
+                model.addAttribute("isCustomer", isCust);
+                model.addAttribute("isStaff", isStaff);
+                if (isCust && user.getEmail() != null) {
+                    model.addAttribute("maskedEmail", DataMaskingUtils.maskEmail(user.getEmail()));
+                }
+            }
+
             model.addAttribute("errorMessage", result.getErrorMessage());
             model.addAttribute("attemptsRemaining", result.getAttemptsRemaining());
             model.addAttribute("mfaType", session.getAttribute("PENDING_MFA_TYPE"));
             return "mfa";
         }
+    }
+
+    @PostMapping("/mfa-resend")
+    public String resendMfaCode(HttpSession session, HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        Long userId = (Long) session.getAttribute("PENDING_MFA_USER_ID");
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            session.invalidate();
+            return "redirect:/login";
+        }
+
+        if (mfaService.isCustomerUser(user)) {
+            try {
+                MfaChallenge challenge = mfaService.createCustomerChallenge(user, request);
+                session.setAttribute("PENDING_MFA_TOKEN", challenge.getChallengeToken());
+                session.setAttribute("PENDING_MFA_TYPE", challenge.getMfaType());
+                redirectAttributes.addFlashAttribute("infoMessage", "A fresh dynamic security code has been sent to your registered email.");
+            } catch (IllegalStateException rateEx) {
+                redirectAttributes.addFlashAttribute("errorMessage", rateEx.getMessage());
+            } catch (OtpDeliveryException deliveryEx) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Failed to deliver dynamic security code. Please check your contact information.");
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Unable to resend verification code. Please try again.");
+            }
+        }
+        return "redirect:/mfa-verify";
+    }
+
+    @GetMapping("/mfa-resend")
+    public String resendMfaCodeGet(HttpSession session, HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        return resendMfaCode(session, request, redirectAttributes);
     }
 
     @GetMapping("/forgot-password")

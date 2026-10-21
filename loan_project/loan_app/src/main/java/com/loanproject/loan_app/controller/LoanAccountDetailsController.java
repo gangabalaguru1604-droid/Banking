@@ -137,7 +137,7 @@ public class LoanAccountDetailsController {
     /**
      * PDF Loan Statement Download
      */
-    @GetMapping("/loan-details/{loanId}/statement.pdf")
+    @GetMapping({"/loan-details/{loanId}/statement.pdf", "/api/staff/loans/{loanId}/statement.pdf"})
     public ResponseEntity<byte[]> downloadLoanStatement(@PathVariable("loanId") Long loanId,
                                                         HttpSession session,
                                                         HttpServletRequest request,
@@ -153,7 +153,9 @@ public class LoanAccountDetailsController {
         Optional<Loan> loanOpt = loanRepository.findById(loanId);
         if (loanOpt.isEmpty()) {
             authAuditService.logStatementDownloadDenied(officer.getEmail(), request, loanId, "Loan ID not found");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(("{\"error\":\"NotFound\",\"message\":\"Loan account ID " + loanId + " not found.\"}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
 
         Loan loan = loanOpt.get();
@@ -162,7 +164,9 @@ public class LoanAccountDetailsController {
         if (!"ALL".equals(authorizedBranch) && !authorizedBranch.equalsIgnoreCase(loan.getBranch())) {
             authAuditService.logStatementDownloadDenied(officer.getEmail(), request, loanId,
                     "Branch mismatch: officer branch " + authorizedBranch + " not authorized for loan branch " + loan.getBranch());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(("{\"error\":\"AccessDenied\",\"message\":\"Access denied: Branch mismatch for loan ID " + loanId + ".\"}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
 
         try {
@@ -171,7 +175,10 @@ public class LoanAccountDetailsController {
 
             authAuditService.logStatementDownloaded(officer.getEmail(), request, loanId, loan.getBranch());
 
-            String filename = "loan_statement_" + (loan.getAccountNumber() != null ? loan.getAccountNumber() : loanId) + ".pdf";
+            String accNum = (loan.getAccountNumber() != null && !loan.getAccountNumber().isBlank())
+                    ? loan.getAccountNumber()
+                    : "LN" + String.format("%010d", loanId);
+            String filename = "loan_statement_" + accNum + ".pdf";
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
@@ -182,7 +189,9 @@ public class LoanAccountDetailsController {
         } catch (Exception e) {
             log.error("Failed to generate PDF loan statement for loanId: {}", loanId, e);
             authAuditService.logStatementDownloadDenied(officer.getEmail(), request, loanId, "Generation error: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(("{\"error\":\"GenerationFailed\",\"message\":\"Failed to generate loan statement: " + e.getMessage() + "\"}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
     }
 }

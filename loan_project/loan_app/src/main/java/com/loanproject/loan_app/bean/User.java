@@ -170,8 +170,20 @@ public class User {
         this.phoneNumber = phoneNumber;
     }
 
+    @org.springframework.data.annotation.Transient
     public boolean isStaff() {
+        if (this.role == AppRole.ROLE_ADMIN ||
+            this.role == AppRole.ROLE_LOAN_OFFICER ||
+            this.role == AppRole.ROLE_COLLECTIONS_AGENT ||
+            this.role == AppRole.ROLE_COLLECTIONS_MANAGER) {
+            return true;
+        }
         return this.userType == UserType.STAFF;
+    }
+
+    @org.springframework.data.annotation.Transient
+    public boolean isCustomer() {
+        return !isStaff() && (this.role == AppRole.ROLE_CUSTOMER || this.userType == UserType.CUSTOMER);
     }
 
     public String getBranch() {

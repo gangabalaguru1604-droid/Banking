@@ -40,9 +40,11 @@
 
             <!-- Download PDF Statement -->
             <a href="/loan-details/${loanDetails.loanId}/statement.pdf"
+               id="btnDownloadStatement"
+               onclick="handleStatementDownload(event, ${loanDetails.loanId})"
                target="_blank"
                class="btn btn-primary"
-               style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:13px; font-weight:600; text-decoration:none; background:#4f46e5; color:#ffffff; border-radius:6px; border:none; box-shadow:0 2px 4px rgba(79,70,229,0.2);">
+               style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:13px; font-weight:600; text-decoration:none; background:#24446B; color:#ffffff; border-radius:6px; border:none; box-shadow:0 2px 4px rgba(36,68,107,0.2);">
                 📄 Download Statement (PDF)
             </a>
 
@@ -636,6 +638,64 @@
         }
     `;
     document.head.appendChild(style);
+
+    // Client-side Blob download handling with error feedback
+    function handleStatementDownload(event, loanId) {
+        if (!window.fetch || !window.Blob) {
+            return; // Allow default link navigation
+        }
+        event.preventDefault();
+        const btn = document.getElementById('btnDownloadStatement');
+        const origHtml = btn ? btn.innerHTML : '📄 Download Statement (PDF)';
+        if (btn) {
+            btn.innerHTML = '⏳ Generating PDF...';
+            btn.style.pointerEvents = 'none';
+        }
+
+        fetch('/loan-details/' + loanId + '/statement.pdf')
+            .then(async (response) => {
+                if (!response.ok) {
+                    let errMessage = 'Download failed (HTTP ' + response.status + ')';
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.message) errMessage = errData.message;
+                    } catch (e) {}
+                    throw new Error(errMessage);
+                }
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errData = await response.json();
+                    throw new Error(errData.message || 'Server returned an error.');
+                }
+                const blob = await response.blob();
+                if (!blob || blob.size === 0) {
+                    throw new Error('Downloaded statement file is empty.');
+                }
+                let filename = 'loan_statement_' + loanId + '.pdf';
+                const disposition = response.headers.get('content-disposition');
+                if (disposition && disposition.includes('filename=')) {
+                    const match = disposition.match(/filename="?([^";]+)"?/);
+                    if (match && match[1]) filename = match[1];
+                }
+                const blobUrl = window.URL.createObjectURL(blob);
+                const tempLink = document.createElement('a');
+                tempLink.href = blobUrl;
+                tempLink.download = filename;
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                document.body.removeChild(tempLink);
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1500);
+            })
+            .catch((err) => {
+                alert('Loan Statement Download Notice:\n' + err.message);
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.innerHTML = origHtml;
+                    btn.style.pointerEvents = 'auto';
+                }
+            });
+    }
 </script>
 
 </body>

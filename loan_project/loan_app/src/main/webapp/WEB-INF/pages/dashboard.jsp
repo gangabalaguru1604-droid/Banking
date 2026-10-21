@@ -71,6 +71,40 @@
                 box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             }
 
+            .clickable-card {
+                cursor: pointer;
+                position: relative;
+                transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+                outline: none;
+            }
+
+            .clickable-card:hover {
+                transform: translateY(-4px) scale(1.01);
+                box-shadow: 0 10px 24px rgba(36, 68, 107, 0.12);
+                border-color: #24446B;
+            }
+
+            .clickable-card:focus-visible {
+                outline: 2px solid #ED7D16;
+                outline-offset: 3px;
+                box-shadow: 0 10px 24px rgba(237, 125, 22, 0.18);
+            }
+
+            .card-action-link {
+                color: #24446B;
+                font-weight: 700;
+                font-size: 11px;
+                transition: color 0.15s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .clickable-card:hover .card-action-link {
+                color: #ED7D16;
+                text-decoration: underline;
+            }
+
             .metric-label {
                 font-size: 12px;
                 font-weight: 700;
@@ -339,6 +373,12 @@
 
                 <!-- Quick Action Buttons -->
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <a href="/total-loans" class="btn btn-secondary" style="width:auto; padding:10px 18px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" title="View all loans across authorized branches">
+                        <span>🏛️ Total Loans (<c:out value="${totalLoansCount != null ? totalLoansCount : 0}"/>)</span>
+                    </a>
+                    <a href="/active-borrowers" class="btn btn-secondary" style="width:auto; padding:10px 18px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" title="View distinct active borrowers directory">
+                        <span>👥 Active Borrowers (<c:out value="${activeBorrowersCount != null ? activeBorrowersCount : 0}"/>)</span>
+                    </a>
                     <a href="/loan-search" class="btn btn-secondary" style="width:auto; padding:10px 18px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
                         <span>🔍 Loan & Customer Search</span>
                     </a>
@@ -351,7 +391,10 @@
                 <%-- 1. LOAN OFFICER SUMMARY CARDS --%>
                 <c:when test="${staffUser.role == 'ROLE_LOAN_OFFICER'}">
                     <div class="metrics-grid">
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" id="cardOfficerActiveLoans"
+                             onclick="window.location.href='/active-borrowers'"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/active-borrowers';}"
+                             role="button" tabindex="0" title="Click to view distinct active borrowers">
                             <div class="metric-label">
                                 <span>Active Loans</span>
                                 <span style="color:#059669;">📈</span>
@@ -419,7 +462,10 @@
                             <div class="metric-hint">Accounts at risk of NPA</div>
                         </div>
 
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" id="cardAgentTotalAccounts"
+                             onclick="window.location.href='/total-loans'"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/total-loans';}"
+                             role="button" tabindex="0" title="Click to view all branch accounts">
                             <div class="metric-label">
                                 <span>Total Branch Accounts</span>
                                 <span style="color:#24446B;">🏢</span>
@@ -460,7 +506,10 @@
                             <div class="metric-hint"><c:out value="${activeLoansCount}"/> servicing loans</div>
                         </div>
 
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" id="cardManagerTotalAccounts"
+                             onclick="window.location.href='/total-loans'"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/total-loans';}"
+                             role="button" tabindex="0" title="Click to view all branch accounts">
                             <div class="metric-label">
                                 <span>Total Accounts</span>
                                 <span style="color:#24446B;">🏛️</span>
@@ -503,7 +552,10 @@
                 <%-- 4. ADMIN SUMMARY CARDS --%>
                 <c:otherwise>
                     <div class="metrics-grid">
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" id="cardTotalLoans"
+                             onclick="window.location.href='/total-loans'"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/total-loans';}"
+                             role="button" tabindex="0" title="Click to view all loans">
                             <div class="metric-label">
                                 <span>Total Loans</span>
                                 <span style="color:#24446B;">🏛️</span>
@@ -511,12 +563,15 @@
                             <div class="metric-value"><c:out value="${totalLoansCount}"/></div>
                             <div class="metric-hint">Across authorized branches</div>
                         </div>
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" id="cardActiveBorrowers"
+                             onclick="window.location.href='/active-borrowers'"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/active-borrowers';}"
+                             role="button" tabindex="0" title="Click to view distinct active borrowers directory">
                             <div class="metric-label">
                                 <span>Active Borrowers</span>
                                 <span style="color:#059669;">👥</span>
                             </div>
-                            <div class="metric-value"><c:out value="${activeLoansCount}"/></div>
+                            <div class="metric-value"><c:out value="${activeBorrowersCount != null ? activeBorrowersCount : activeLoansCount}"/></div>
                             <div class="metric-hint">Servicing loans</div>
                         </div>
                         <div class="metric-card" style="border-top:3px solid #ED7D16;">
@@ -1326,7 +1381,10 @@
             <%-- Four Summary Cards --%>
             <div class="summary-grid">
                 <!-- 1. Total Loans -->
-                <div class="summary-card">
+                <div class="summary-card clickable-card"
+                     onclick="var el = document.getElementById('customerLoanPortfolio'); if(el) el.scrollIntoView({behavior:'smooth'});"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); var el = document.getElementById('customerLoanPortfolio'); if(el) el.scrollIntoView({behavior:'smooth'});}"
+                     role="button" tabindex="0" title="Click to scroll to your loan portfolio">
                     <div class="card-top">
                         <span class="card-label">Total Loans</span>
                         <div class="card-icon-wrap" style="background:#F0F4F8; color:#24446B;">📋</div>
@@ -1377,7 +1435,7 @@
             <%-- Active Loans / Empty State Section --%>
             <c:choose>
                 <c:when test="${not empty loans && activeLoanCount > 0}">
-                    <div class="dashboard-section-card">
+                    <div class="dashboard-section-card" id="customerLoanPortfolio">
                         <div class="section-header">
                             <div>
                                 <h2 class="section-title">Your Loan Portfolio</h2>

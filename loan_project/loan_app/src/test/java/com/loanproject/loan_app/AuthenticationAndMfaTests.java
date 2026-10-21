@@ -71,11 +71,17 @@ public class AuthenticationAndMfaTests {
     @Autowired
     private com.loanproject.loan_app.repository.PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private com.loanproject.loan_app.security.CustomerOtpDeliveryService customerOtpDeliveryService;
+
     private User testStaff;
     private String testSecret;
 
     @BeforeEach
     void setup() {
+        mfaService.setStaffStaticOtpEnabled(true);
+        mfaService.setStaffTestOtp("123456");
+        customerOtpDeliveryService.setSimulateDeliveryFailure(false);
         testSecret = "JBSWY3DPEHPK3PXP";
         challengeRepository.deleteAll();
         passwordResetTokenRepository.deleteAll();
@@ -689,6 +695,7 @@ public class AuthenticationAndMfaTests {
         customer.setPassword(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("CustPass123!"));
         customer.setMfaSecret(encryptionService.encrypt(testSecret));
         customer.setMfaEnrolled(true);
+        customer.setMfaType("DYNAMIC_EMAIL");
         customer = userRepository.save(customer);
 
         // Stage 1: Password login
@@ -704,10 +711,11 @@ public class AuthenticationAndMfaTests {
         assertNotNull(session);
 
         // Stage 2: MFA verification -> redirects to /dashboard
-        String validTotp = totpService.generateCurrentCode(testSecret);
+        String customerOtp = customerOtpDeliveryService.getLastDeliveredOtpForTesting("customer.redirect@bank.com");
+        assertNotNull(customerOtp);
         mockMvc.perform(post("/mfa-verify")
                 .session(session)
-                .param("code", validTotp)
+                .param("code", customerOtp)
                 .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dashboard"));
@@ -753,5 +761,405 @@ public class AuthenticationAndMfaTests {
         mockMvc.perform(get("/dashboard").session(session))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
+    }
+
+    @Test
+    @DisplayName("Test: Staff login succeeds using valid credentials followed by configured static test OTP")
+    void testStaffLoginWithConfiguredStaticTestOtp() throws Exception {
+        MvcResult stage1Result = mockMvc.perform(post("/login")
+                .param("email", "teststaff@bank.com")
+                .param("password", "StaffPassword123!")
+                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mfa-verify"))
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+        assertNotNull(session);
+
+        // Submit static test OTP "123456"
+        mockMvc.perform(post("/mfa-verify")
+                .session(session)
+                .param("code", "123456")
+                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
+
+        mockMvc.perform(get("/dashboard").session(session))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Test: Staff login static OTP is configurable via environment / service configuration")
+    void testStaffLoginConfigurableStaticOtp() throws Exception {
+        String originalOtp = mfaService.getStaffTestOtp();
+        try {
+            mfaService.setStaffTestOtp("654321");
+
+            MvcResult stage1Result = mockMvc.perform(post("/login")
+                    .param("email", "teststaff@bank.com")
+                    .param("password", "StaffPassword123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+            assertNotNull(session);
+
+            // Old OTP "123456" is rejected
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", "123456")
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("mfa"))
+                    .andExpect(model().attributeExists("errorMessage"));
+
+            // New configured OTP "654321" succeeds
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", "654321")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/dashboard"));
+        } finally {
+            mfaService.setStaffTestOtp(originalOtp);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Production configuration disables static staff OTP and requires proper MFA")
+    void testProductionConfigurationDisablesStaticStaffOtp() throws Exception {
+        boolean originalEnabled = mfaService.isStaffStaticOtpEnabled();
+        try {
+            mfaService.setStaffStaticOtpEnabled(false);
+
+            MvcResult stage1Result = mockMvc.perform(post("/login")
+                    .param("email", "teststaff@bank.com")
+                    .param("password", "StaffPassword123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+            assertNotNull(session);
+
+            // Static OTP "123456" is rejected when static OTP is disabled
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", "123456")
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("mfa"))
+                    .andExpect(model().attributeExists("errorMessage"));
+
+            // Enrolled TOTP code succeeds
+            String validTotp = totpService.generateCurrentCode(testSecret);
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", validTotp)
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/dashboard"));
+        } finally {
+            mfaService.setStaffStaticOtpEnabled(originalEnabled);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Customer login completes dynamic MFA with fresh time-limited OTP")
+    void testCustomerLoginWithDynamicMfa() throws Exception {
+        userRepository.findByEmail("customer.dynamic@bank.com").ifPresent(userRepository::delete);
+        User customer = new User("Dynamic Customer", "customer.dynamic@bank.com", "CustomerPass123!",
+                AppRole.ROLE_CUSTOMER, UserType.CUSTOMER);
+        userService.register(customer);
+        customer = userRepository.findByEmail("customer.dynamic@bank.com").orElseThrow();
+        customer.setMfaType("DYNAMIC_EMAIL");
+        customer.setMfaEnrolled(true);
+        userRepository.save(customer);
+
+        try {
+            // Stage 1: Primary credentials
+            MvcResult stage1Result = mockMvc.perform(post("/login")
+                    .param("email", "customer.dynamic@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+            assertNotNull(session);
+
+            String challengeToken = (String) session.getAttribute("PENDING_MFA_TOKEN");
+            assertNotNull(challengeToken);
+
+            MfaChallenge challenge = challengeRepository.findByChallengeToken(challengeToken).orElseThrow();
+            assertEquals("DYNAMIC_EMAIL", challenge.getMfaType());
+            assertNotNull(challenge.getHashedOtpCode(), "Dynamic OTP must be stored as hash");
+
+            // Retrieve delivered dynamic OTP via testing hook (no logs leaked)
+            String deliveredOtp = customerOtpDeliveryService.getLastDeliveredOtpForTesting("customer.dynamic@bank.com");
+            assertNotNull(deliveredOtp);
+            assertEquals(6, deliveredOtp.length());
+
+            // Stage 2: Submit dynamic OTP
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", deliveredOtp)
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/dashboard"));
+
+            mockMvc.perform(get("/dashboard").session(session))
+                    .andExpect(status().isOk());
+        } finally {
+            userRepository.findByEmail("customer.dynamic@bank.com").ifPresent(userRepository::delete);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Static staff OTP is strictly rejected for customer accounts")
+    void testStaticStaffOtpRejectedForCustomerAccounts() throws Exception {
+        userRepository.findByEmail("customer.strict@bank.com").ifPresent(userRepository::delete);
+        User customer = new User("Strict Customer", "customer.strict@bank.com", "CustomerPass123!",
+                AppRole.ROLE_CUSTOMER, UserType.CUSTOMER);
+        userService.register(customer);
+        customer = userRepository.findByEmail("customer.strict@bank.com").orElseThrow();
+        customer.setMfaType("DYNAMIC_EMAIL");
+        customer.setMfaEnrolled(true);
+        userRepository.save(customer);
+
+        try {
+            MvcResult stage1Result = mockMvc.perform(post("/login")
+                    .param("email", "customer.strict@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+            assertNotNull(session);
+
+            // Attempting to use the staff static OTP "123456" must be REJECTED
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", "123456")
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("mfa"))
+                    .andExpect(model().attribute("errorMessage", "Invalid authentication code. 2 attempts remaining."));
+        } finally {
+            userRepository.findByEmail("customer.strict@bank.com").ifPresent(userRepository::delete);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Customer dynamic MFA locks after 3 incorrect attempts")
+    void testCustomerMfaLocksAfterThreeIncorrectAttempts() throws Exception {
+        userRepository.findByEmail("customer.lock@bank.com").ifPresent(userRepository::delete);
+        User customer = new User("Lock Customer", "customer.lock@bank.com", "CustomerPass123!",
+                AppRole.ROLE_CUSTOMER, UserType.CUSTOMER);
+        userService.register(customer);
+        customer = userRepository.findByEmail("customer.lock@bank.com").orElseThrow();
+        customer.setMfaType("DYNAMIC_EMAIL");
+        customer.setMfaEnrolled(true);
+        userRepository.save(customer);
+
+        try {
+            MvcResult stage1Result = mockMvc.perform(post("/login")
+                    .param("email", "customer.lock@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+            assertNotNull(session);
+            String challengeToken = (String) session.getAttribute("PENDING_MFA_TOKEN");
+
+            // Attempt 1: Wrong code
+            mockMvc.perform(post("/mfa-verify").session(session).param("code", "000000").with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("attemptsRemaining", 2));
+
+            // Attempt 2: Wrong code
+            mockMvc.perform(post("/mfa-verify").session(session).param("code", "111111").with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("attemptsRemaining", 1));
+
+            // Attempt 3: Wrong code -> locks challenge and redirects to login with error
+            mockMvc.perform(post("/mfa-verify").session(session).param("code", "222222").with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/login?error=true"));
+
+            MfaChallenge lockedChallenge = challengeRepository.findByChallengeToken(challengeToken).orElseThrow();
+            assertTrue(lockedChallenge.isLocked());
+        } finally {
+            userRepository.findByEmail("customer.lock@bank.com").ifPresent(userRepository::delete);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Customer MFA delivery failure does not bypass MFA and allows safe retry")
+    void testCustomerMfaDeliveryFailureDoesNotBypassMfa() throws Exception {
+        userRepository.findByEmail("customer.fail@bank.com").ifPresent(userRepository::delete);
+        User customer = new User("Fail Customer", "customer.fail@bank.com", "CustomerPass123!",
+                AppRole.ROLE_CUSTOMER, UserType.CUSTOMER);
+        userService.register(customer);
+        customer = userRepository.findByEmail("customer.fail@bank.com").orElseThrow();
+        customer.setMfaType("DYNAMIC_EMAIL");
+        customer.setMfaEnrolled(true);
+        userRepository.save(customer);
+
+        try {
+            customerOtpDeliveryService.setSimulateDeliveryFailure(true);
+
+            // Attempt login when delivery fails
+            mockMvc.perform(post("/login")
+                    .param("email", "customer.fail@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/login?mfaDeliveryError=true"));
+
+            // Verify login page renders clear error message
+            mockMvc.perform(get("/login?mfaDeliveryError=true"))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("errorMessage", "Unable to deliver dynamic authentication code. Please try logging in again or contact customer support."));
+
+            // Unauthenticated user CANNOT access protected dashboard
+            mockMvc.perform(get("/dashboard"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrlPattern("**/login"));
+        } finally {
+            customerOtpDeliveryService.setSimulateDeliveryFailure(false);
+            userRepository.findByEmail("customer.fail@bank.com").ifPresent(userRepository::delete);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Customer login with TOTP Authenticator QR code scan and verification")
+    void testCustomerLoginWithTotpAuthenticatorQrScanEnrollment() throws Exception {
+        userRepository.findByEmail("customer.totp@bank.com").ifPresent(userRepository::delete);
+        User customer = new User("TOTP Customer", "customer.totp@bank.com", "CustomerPass123!",
+                AppRole.ROLE_CUSTOMER, UserType.CUSTOMER);
+        userService.register(customer);
+        // Initially unenrolled (mfaEnrolled = false, mfaType = "TOTP")
+
+        try {
+            // Stage 1: Customer logs in
+            MvcResult loginResult = mockMvc.perform(post("/login")
+                    .param("email", "customer.totp@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-enroll"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+            assertNotNull(session);
+            String enrollSecret = (String) session.getAttribute("PENDING_MFA_ENROLL_SECRET");
+            assertNotNull(enrollSecret);
+
+            // Verify /mfa-enroll displays QR code
+            mockMvc.perform(get("/mfa-enroll").session(session))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("mfa-enroll"))
+                    .andExpect(model().attributeExists("qrCodeDataUri"))
+                    .andExpect(model().attributeExists("secretKey"));
+
+            // Submit 6-digit code generated from Authenticator secret
+            String totpCode = totpService.generateCurrentCode(enrollSecret);
+            mockMvc.perform(post("/mfa-enroll")
+                    .session(session)
+                    .param("code", totpCode)
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/dashboard"));
+
+            // Verify customer is now enrolled in database
+            User enrolledCustomer = userRepository.findByEmail("customer.totp@bank.com").orElseThrow();
+            assertTrue(enrolledCustomer.isMfaEnrolled());
+            assertEquals("TOTP", enrolledCustomer.getMfaType());
+
+            // Subsequent login routes to /mfa-verify
+            MvcResult secondLogin = mockMvc.perform(post("/login")
+                    .param("email", "customer.totp@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession secondSession = (MockHttpSession) secondLogin.getRequest().getSession(false);
+            assertNotNull(secondSession);
+
+            // Submit current Authenticator code on /mfa-verify
+            String currentTotp = totpService.generateCurrentCode(enrollSecret);
+            mockMvc.perform(post("/mfa-verify")
+                    .session(secondSession)
+                    .param("code", currentTotp)
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/dashboard"));
+
+        } finally {
+            userRepository.findByEmail("customer.totp@bank.com").ifPresent(userRepository::delete);
+        }
+    }
+
+    @Test
+    @DisplayName("Test: Customer can request resend of dynamic verification code")
+    void testCustomerMfaResendCode() throws Exception {
+        userRepository.findByEmail("customer.resend@bank.com").ifPresent(userRepository::delete);
+        User customer = new User("Resend Customer", "customer.resend@bank.com", "CustomerPass123!",
+                AppRole.ROLE_CUSTOMER, UserType.CUSTOMER);
+        userService.register(customer);
+        customer = userRepository.findByEmail("customer.resend@bank.com").orElseThrow();
+        customer.setMfaType("DYNAMIC_EMAIL");
+        customer.setMfaEnrolled(true);
+        userRepository.save(customer);
+
+        try {
+            MvcResult stage1Result = mockMvc.perform(post("/login")
+                    .param("email", "customer.resend@bank.com")
+                    .param("password", "CustomerPass123!")
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"))
+                    .andReturn();
+
+            MockHttpSession session = (MockHttpSession) stage1Result.getRequest().getSession(false);
+            assertNotNull(session);
+            String firstOtp = customerOtpDeliveryService.getLastDeliveredOtpForTesting("customer.resend@bank.com");
+
+            // Wait 5 seconds to pass rate limit
+            Thread.sleep(5100);
+
+            // Perform resend
+            mockMvc.perform(post("/mfa-resend")
+                    .session(session)
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/mfa-verify"));
+
+            String secondOtp = customerOtpDeliveryService.getLastDeliveredOtpForTesting("customer.resend@bank.com");
+            assertNotNull(secondOtp);
+
+            // Verify new code can authenticate
+            mockMvc.perform(post("/mfa-verify")
+                    .session(session)
+                    .param("code", secondOtp)
+                    .with(csrf()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/dashboard"));
+        } finally {
+            userRepository.findByEmail("customer.resend@bank.com").ifPresent(userRepository::delete);
+        }
     }
 }

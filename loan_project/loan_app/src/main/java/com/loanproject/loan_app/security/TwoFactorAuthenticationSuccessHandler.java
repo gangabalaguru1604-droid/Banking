@@ -72,7 +72,31 @@ public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSucc
             newSession.setAttribute("SPRING_SECURITY_SAVED_REQUEST_URL", savedRedirectUrl);
         }
 
-        // 4. Evaluate enrollment state consistency
+        // 4. Route by trusted backend account role and preferred MFA type
+        if (mfaService.isCustomerUser(user) && "DYNAMIC_EMAIL".equalsIgnoreCase(user.getMfaType()) && user.isMfaEnrolled()) {
+            // Dynamic email OTP flow for accounts explicitly configured for email OTP
+            try {
+                MfaChallenge challenge = mfaService.createCustomerChallenge(user, request);
+                newSession.setAttribute("PENDING_MFA_USER_ID", user.getId());
+                newSession.setAttribute("PENDING_MFA_TOKEN", challenge.getChallengeToken());
+                newSession.setAttribute("PENDING_MFA_TYPE", challenge.getMfaType());
+
+                log.info("DIAGNOSTIC: Customer User {} -> dynamicMfa=true, selectedFlow=CUSTOMER_MFA_VERIFY, destination=/mfa-verify", user.getEmail());
+                response.sendRedirect("/mfa-verify");
+            } catch (OtpDeliveryException e) {
+                log.error("Customer dynamic OTP delivery failed for user {}: {}", DataMaskingUtils.maskEmail(user.getEmail()), e.getMessage());
+                auditService.record(user.getEmail(), request, "CUSTOMER_MFA_DELIVERY_FAILED", "FAILURE", "DELIVERY_ERROR",
+                        "Failed to deliver dynamic OTP to customer verification channel");
+                // Do not bypass customer MFA if delivery fails; show error and allow safe retry
+                response.sendRedirect("/login?mfaDeliveryError=true");
+            } catch (Exception e) {
+                log.error("Failed to create customer MFA challenge for user: " + user.getEmail(), e);
+                response.sendRedirect("/login?error=true");
+            }
+            return;
+        }
+
+        // Authenticator App (TOTP with QR code scan) & Staff Flow
         boolean isEnrolled = user.isMfaEnrolled();
         boolean hasSecret = user.getMfaSecret() != null && !user.getMfaSecret().isBlank();
 
@@ -107,7 +131,10 @@ public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSucc
 
             // Consistent enrolled account: issue challenge and route to /mfa-verify
             try {
-                MfaChallenge challenge = mfaService.createChallenge(user, user.getMfaType(), request);
+                MfaChallenge challenge = (mfaService.isStaffUser(user) && mfaService.isStaffStaticOtpEnabled())
+                        ? mfaService.createStaffChallenge(user, request)
+                        : mfaService.createChallenge(user, user.getMfaType() != null ? user.getMfaType() : "TOTP", request);
+
                 newSession.setAttribute("PENDING_MFA_USER_ID", user.getId());
                 newSession.setAttribute("PENDING_MFA_TOKEN", challenge.getChallengeToken());
                 newSession.setAttribute("PENDING_MFA_TYPE", challenge.getMfaType());
@@ -121,7 +148,7 @@ public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSucc
             return;
         }
 
-        // Branch 2: Account is NOT enrolled (new, unconfirmed, or reset account)
+        // Branch 2: Staff account is NOT enrolled (new, unconfirmed, or reset account)
         if (hasSecret) {
             // Inconsistency: mfaEnrolled=false but secret exists in DB (unconfirmed or stale)
             log.warn("DIAGNOSTIC: User {} -> mfaEnrolled=false, hasSecret=true, selectedFlow=UNCONFIRMED_ENROLL, destination=/mfa-enroll", user.getEmail());

@@ -33,7 +33,10 @@
 
     <!-- Search Form Card -->
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px; margin-bottom:25px;">
-        <form action="/loan-search" method="get" id="searchForm">
+        <form action="/loan-search" method="post" id="searchForm">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+            <input type="hidden" name="page" id="pageInput" value="${page != null ? page : 0}"/>
+            <input type="hidden" name="size" value="${size != null ? size : 10}"/>
             <div style="display:grid; grid-template-columns: 220px 1fr 140px; gap:15px; align-items:end;">
                 <div>
                     <label style="font-weight:600; font-size:13px; color:#4a5568;">Search By Category</label>
@@ -187,13 +190,13 @@
                         </div>
                         <div style="display:flex; gap:8px;">
                             <c:if test="${results.hasPrevious()}">
-                                <a href="/loan-search?searchType=${searchType}&query=<c:out value='${query}'/>&page=${results.number - 1}&size=${size}" 
+                                <a href="javascript:void(0)" onclick="submitPage(${results.number - 1})" 
                                    class="btn btn-secondary" style="padding:6px 14px; width:auto; font-size:13px; text-decoration:none;">
                                     &laquo; Previous
                                 </a>
                             </c:if>
                             <c:if test="${results.hasNext()}">
-                                <a href="/loan-search?searchType=${searchType}&query=<c:out value='${query}'/>&page=${results.number + 1}&size=${size}" 
+                                <a href="javascript:void(0)" onclick="submitPage(${results.number + 1})" 
                                    class="btn btn-secondary" style="padding:6px 14px; width:auto; font-size:13px; text-decoration:none;">
                                     Next &raquo;
                                 </a>
@@ -237,6 +240,11 @@
             input.maxLength = 50;
             hint.innerHTML = "💡 Secondary search: Case-insensitive customer name match within your branch.";
         }
+    }
+
+    function submitPage(pageNumber) {
+        document.getElementById('pageInput').value = pageNumber;
+        document.getElementById('searchForm').submit();
     }
 
     // Set initial placeholder on page load

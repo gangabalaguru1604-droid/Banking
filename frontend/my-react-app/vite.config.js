@@ -17,7 +17,7 @@ export default defineConfig({
       },
       // Proxy all backend routes and rewrite redirect Location headers so the browser
       // stays seamlessly on localhost:5173 without cross-port cookie/session loss.
-      '^/(login|register|logout|mfa-verify|mfa-enroll|forgot-password|reset-password|dashboard|applyLoan|pay|payPage|loan-search|customer-profile|loan-details|admin|staff|jsp-home)': {
+      '^/(login|register|logout|mfa-verify|mfa-enroll|forgot-password|reset-password|dashboard|applyLoan|pay|payPage|customer-profile|loan-details|admin|staff|jsp-home|total-loans|all-loans|active-borrowers)': {
         target: 'http://localhost:8081',
         changeOrigin: true,
         autoRewrite: true,
