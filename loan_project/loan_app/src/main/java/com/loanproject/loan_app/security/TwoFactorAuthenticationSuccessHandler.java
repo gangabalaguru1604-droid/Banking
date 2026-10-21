@@ -124,28 +124,12 @@ public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSucc
             }
 
             if (!secretDecryptable) {
-                if (mfaService.isStaffUser(user)) {
-                    log.warn("Staff user {} has un-decryptable MFA secret under current key. Self-healing secret with seed.", user.getEmail());
-                    String seedSecret = "JBSWY3DPEHPK3PXP";
-                    user.setMfaSecret(encryptionService.encrypt(seedSecret));
-                    user.setMfaEnrolled(true);
-                    user.setMfaType("STAFF_STATIC");
-                    userRepository.save(user);
-                } else if (mfaService.isCustomerUser(user)) {
-                    log.warn("Customer user {} has un-decryptable MFA secret. Directing to /mfa-enroll to re-scan QR code.", user.getEmail());
-                    user.setMfaEnrolled(false);
-                    user.setMfaSecret(null);
-                    user.setMfaType("TOTP");
-                    userRepository.save(user);
-                    redirectToEnrollment(user, request, response, newSession);
-                    return;
-                } else {
-                    log.error("DIAGNOSTIC: User {} -> mfaEnrolled=true, hasSecret=true, secretDecryptable=false, selectedFlow=INCONSISTENT_STATE, destination=/login?error=true", user.getEmail());
-                    auditService.record(user.getEmail(), request, "MFA_STATE_INCONSISTENCY", "FAILURE", "CORRUPT_SECRET",
-                            "Account is marked enrolled but stored TOTP secret cannot be decrypted");
-                    response.sendRedirect("/login?error=true");
-                    return;
-                }
+                // Inconsistency: mfaEnrolled=true but secret cannot be decrypted under current cryptographic key
+                log.error("DIAGNOSTIC: User {} -> mfaEnrolled=true, hasSecret=true, secretDecryptable=false, selectedFlow=INCONSISTENT_STATE, destination=/login?error=true", user.getEmail());
+                auditService.record(user.getEmail(), request, "MFA_STATE_INCONSISTENCY", "FAILURE", "CORRUPT_SECRET",
+                        "Stored MFA secret cannot be decrypted under current cryptographic key");
+                response.sendRedirect("/login?error=true");
+                return;
             }
 
             // Consistent enrolled account: issue challenge and route to /mfa-verify
