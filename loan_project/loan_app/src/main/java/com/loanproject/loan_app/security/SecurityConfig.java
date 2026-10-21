@@ -58,9 +58,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**"))
             .authenticationProvider(authenticationProvider())
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Allow internal view forwarding and error dispatching for JSP views
                 .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
                 .requestMatchers("/WEB-INF/**").permitAll()
@@ -68,6 +70,10 @@ public class SecurityConfig {
                 // Public routes
                 .requestMatchers(
                     "/",
+                    "/jsp-home",
+                    "/index.html",
+                    "/assets/**",
+                    "/api/auth/**",
                     "/login",
                     "/register",
                     "/forgot-password",
@@ -138,5 +144,24 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        configuration.setAllowedOriginPatterns(java.util.List.of(
+            "http://localhost:5173", 
+            "http://localhost:3000", 
+            "http://127.0.0.1:5173",
+            "http://localhost:10000"
+        ));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setExposedHeaders(java.util.List.of("X-CSRF-TOKEN", "Set-Cookie"));
+        configuration.setAllowCredentials(true);
+
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

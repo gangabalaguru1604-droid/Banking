@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indian Bank - Loan Management System</title>
+    <title>Bank of India - Loan Management System</title>
     <!-- CSRF Tokens for AJAX -->
     <meta name="_csrf" content="${_csrf.token}"/>
     <meta name="_csrf_header" content="${_csrf.headerName}"/>
@@ -33,7 +33,7 @@
         .logo a {
             font-size: 20px;
             font-weight: 800;
-            color: #24446B;
+            color: #0050A4;
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -41,8 +41,15 @@
             letter-spacing: -0.3px;
         }
 
+        .logo a img.bank-logo {
+            height: 36px;
+            width: auto;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
         .logo a span.brand-orange {
-            color: #ED7D16;
+            color: #E31B23;
         }
 
         .nav {
@@ -343,7 +350,10 @@
 
 <div class="navbar">
     <div class="logo">
-        <a href="/">🏦 Indian Bank</a>
+        <a href="/">
+            <img src="/images/bank-logo.jpg" alt="Bank of India" class="bank-logo"/>
+            Bank of <span class="brand-orange">India</span>
+        </a>
     </div>
 
     <div class="nav">

@@ -29,5 +29,47 @@ public class SessionController {
         }
         return ResponseEntity.status(401).body(Map.of("status", "expired"));
     }
-}
+    @GetMapping("/api/auth/status")
+    public ResponseEntity<Map<String, Object>> authStatus(HttpServletRequest request,
+                                                          org.springframework.security.web.csrf.CsrfToken csrfToken) {
+        Map<String, Object> response = new java.util.HashMap<>();
+        
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isAuthenticated = auth != null
+                && auth.isAuthenticated()
+                && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken);
 
+        response.put("authenticated", isAuthenticated);
+
+        if (csrfToken != null) {
+            response.put("csrfToken", csrfToken.getToken());
+            response.put("csrfHeader", csrfToken.getHeaderName());
+            response.put("csrfParameter", csrfToken.getParameterName());
+        }
+
+        if (isAuthenticated) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof com.loanproject.loan_app.security.CustomUserDetails userDetails) {
+                com.loanproject.loan_app.bean.User user = userDetails.getUser();
+                response.put("name", user.getName());
+                response.put("email", user.getEmail());
+                response.put("role", user.getRole() != null ? user.getRole().name() : "");
+            } else {
+                response.put("name", auth.getName());
+                response.put("role", auth.getAuthorities().stream().findFirst().map(a -> a.getAuthority()).orElse(""));
+            }
+        } else {
+            // Check legacy session attribute fallback if any
+            HttpSession session = request.getSession(false);
+            if (session != null && session.getAttribute("user") instanceof com.loanproject.loan_app.bean.User user) {
+                response.put("authenticated", true);
+                response.put("name", user.getName());
+                response.put("email", user.getEmail());
+                response.put("role", user.getRole() != null ? user.getRole().name() : "");
+            }
+        }
+
+        return ResponseEntity.ok(response);
+    }
+}

@@ -67,6 +67,15 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
+        org.springframework.core.io.Resource indexHtml = new org.springframework.core.io.ClassPathResource("static/index.html");
+        if (indexHtml.exists()) {
+            return "forward:/index.html";
+        }
+        return "index";
+    }
+
+    @GetMapping("/jsp-home")
+    public String jspHome() {
         return "index";
     }
 
