@@ -430,19 +430,20 @@ public class RbacAndAuthorizationTests {
                         .with(user(new CustomUserDetails(customer1))))
                 .andExpect(status().isForbidden());
 
-        // 6. Verify dashboard.jsp file structure: Actions column contains single Profile button to /loan-details and NO 360° or Pay buttons in staff table
-        java.nio.file.Path jspPath = java.nio.file.Paths.get("src/main/webapp/WEB-INF/pages/dashboard.jsp");
-        String jspContent = java.nio.file.Files.readString(jspPath);
-        assertTrue(jspContent.contains("<a href=\"/loan-details?loanId=${l.loanId}\""), "Staff loan portfolio must link to /loan-details");
-        assertTrue(jspContent.contains("Profile"), "Action button text must be Profile");
-        assertFalse(jspContent.contains(">360°<"), "Separate 360° button must be removed from dashboard");
-        assertFalse(jspContent.contains("360°</a>"), "Separate 360° link must be removed from dashboard");
+        // 6. Verify StaffDashboard.tsx file structure: Actions column contains single Profile button to /loan-details and NO 360° or Pay buttons in staff table
+        java.nio.file.Path reactPath = java.nio.file.Path.of("../../frontend/my-react-app/src/pages/StaffDashboard.tsx");
+        if (!java.nio.file.Files.exists(reactPath)) {
+            reactPath = java.nio.file.Path.of("frontend/my-react-app/src/pages/StaffDashboard.tsx");
+        }
+        String staffDashboardContent = java.nio.file.Files.readString(reactPath);
+        assertTrue(staffDashboardContent.contains("/loan-details?loanId="), "Staff loan portfolio must link to /loan-details");
+        assertTrue(staffDashboardContent.contains("Profile"), "Action button text must be Profile");
+        assertFalse(staffDashboardContent.contains(">360°<"), "Separate 360° button must be removed from dashboard");
+        assertFalse(staffDashboardContent.contains("360°</a>"), "Separate 360° link must be removed from dashboard");
 
         // Staff table must not have any pay action
-        int staffSectionEnd = jspContent.indexOf("<%-- Customer Dashboard View --%>");
-        String staffSection = staffSectionEnd != -1 ? jspContent.substring(0, staffSectionEnd) : jspContent;
-        assertFalse(staffSection.contains("/payPage"), "Staff Loan Portfolio must not contain /payPage link");
-        assertFalse(staffSection.contains(">Pay<"), "Staff Loan Portfolio must not contain Pay button");
+        assertFalse(staffDashboardContent.contains("/payPage"), "Staff Loan Portfolio must not contain /payPage link");
+        assertFalse(staffDashboardContent.contains(">Pay<"), "Staff Loan Portfolio must not contain Pay button");
     }
 
     @Test

@@ -237,6 +237,7 @@ public class LoanStatementPdfService {
             footer.setAlignment(Element.ALIGN_CENTER);
             document.add(footer);
 
+            document.close();
             return out.toByteArray();
 
         } catch (DocumentException e) {

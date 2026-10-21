@@ -93,19 +93,22 @@ public class LoanApplicationPredefinedTermsTests {
                 .andExpect(model().attributeExists("minLoanAmount"))
                 .andExpect(model().attributeExists("maxLoanAmount"));
 
-        // Verify JSP file content strictly has NO interest or tenure input fields
-        File jspFile = new File("src/main/webapp/WEB-INF/pages/applyLoan.jsp");
-        assertTrue(jspFile.exists(), "applyLoan.jsp must exist");
-        String jspContent = Files.readString(jspFile.toPath());
+        // Verify React component content strictly has NO interest or tenure input fields
+        java.nio.file.Path reactFilePath = java.nio.file.Path.of("../../frontend/my-react-app/src/pages/ApplyLoanPage.tsx");
+        if (!java.nio.file.Files.exists(reactFilePath)) {
+            reactFilePath = java.nio.file.Path.of("frontend/my-react-app/src/pages/ApplyLoanPage.tsx");
+        }
+        assertTrue(java.nio.file.Files.exists(reactFilePath), "ApplyLoanPage.tsx must exist");
+        String reactContent = java.nio.file.Files.readString(reactFilePath);
 
         // Must have loan amount input
-        assertTrue(jspContent.contains("name=\"amount\""), "applyLoan.jsp must have name='amount' input");
-        assertTrue(jspContent.contains("Submit Loan Application"), "applyLoan.jsp must preserve Submit Loan Application button");
-        assertTrue(jspContent.contains("Cancel & Back to Dashboard"), "applyLoan.jsp must preserve Cancel link");
+        assertTrue(reactContent.contains("name=\"amount\""), "ApplyLoanPage.tsx must have name='amount' input");
+        assertTrue(reactContent.contains("Submit Loan Application"), "ApplyLoanPage.tsx must preserve Submit Loan Application button");
+        assertTrue(reactContent.contains("Cancel & Back to Dashboard"), "ApplyLoanPage.tsx must preserve Cancel link");
 
         // Must NOT have editable interest or tenure input fields
-        assertFalse(jspContent.contains("name=\"interest\""), "applyLoan.jsp must NOT contain name='interest' input");
-        assertFalse(jspContent.contains("name=\"months\""), "applyLoan.jsp must NOT contain name='months' input");
+        assertFalse(reactContent.contains("name=\"interest\""), "ApplyLoanPage.tsx must NOT contain name='interest' input");
+        assertFalse(reactContent.contains("name=\"months\""), "ApplyLoanPage.tsx must NOT contain name='months' input");
     }
 
     @Test

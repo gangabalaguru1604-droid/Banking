@@ -59,7 +59,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**", "/api/auth/**"))
             .authenticationProvider(authenticationProvider())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -88,29 +88,32 @@ public class SecurityConfig {
                     "/js/**",
                     "/images/**",
                     "/favicon.ico",
+                    "/favicon.svg",
+                    "/icons.svg",
                     "/error"
                 ).permitAll()
 
                 // Admin-only management endpoints
-                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
 
                 // Loan origination: Loan Officers, Admin, or Customers applying for self
-                .requestMatchers("/applyLoan").hasAnyRole("CUSTOMER", "LOAN_OFFICER", "ADMIN")
+                .requestMatchers("/applyLoan", "/api/applyLoan", "/api/applyLoan/**").hasAnyRole("CUSTOMER", "LOAN_OFFICER", "ADMIN")
 
                 // Repayment processing: Strictly restricted to Customers paying self (All staff roles are restricted)
-                .requestMatchers("/payPage", "/pay").hasRole("CUSTOMER")
+                .requestMatchers("/payPage", "/pay", "/api/pay", "/api/pay/**").hasRole("CUSTOMER")
 
                 // Staff Loan Processing (Approve / Reject): Loan Officers, Admins
-                .requestMatchers("/staff/loans/approve", "/staff/loans/reject").hasAnyRole("LOAN_OFFICER", "ADMIN")
+                .requestMatchers("/staff/loans/approve", "/staff/loans/reject", "/api/staff/loans/approve", "/api/staff/loans/reject").hasAnyRole("LOAN_OFFICER", "ADMIN")
 
                 // Staff Collections Recording: Collections Agents, Collections Managers, Admins
-                .requestMatchers("/staff/collections/record").hasAnyRole("COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
+                .requestMatchers("/staff/collections/record", "/api/staff/collections/record").hasAnyRole("COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
 
                 // Loan search, customer profile, and 360 degree details: Loan Officers, Collections staff, Admins
-                .requestMatchers("/loan-search", "/loan-search/**", "/customer-profile", "/customer-profile/**", "/loan-details", "/loan-details/**").hasAnyRole("LOAN_OFFICER", "COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
+                .requestMatchers("/loan-search", "/loan-search/**", "/customer-profile", "/customer-profile/**", "/loan-details", "/loan-details/**",
+                                 "/api/loan-search", "/api/loan-search/**", "/api/customer-profile", "/api/customer-profile/**", "/api/loan-details", "/api/loan-details/**").hasAnyRole("LOAN_OFFICER", "COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
 
                 // Dashboard
-                .requestMatchers("/dashboard").authenticated()
+                .requestMatchers("/dashboard", "/api/dashboard", "/api/dashboard/**").authenticated()
 
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
