@@ -10,7 +10,9 @@ services:
       - key: PORT
         value: 8080
       - key: SESSION_COOKIE_SECURE
-        value: "false"
+        value: "true"
+      - key: FRONTEND_URL
+        value: https://indian-bank-loan-frontend.onrender.com
       - key: TRUSTED_PROXIES_ENABLED
         value: "true"
       # Set the MongoDB Atlas connection string in the Render Dashboard

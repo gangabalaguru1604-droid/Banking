@@ -36,10 +36,27 @@ export interface SearchLoansParams {
   size?: number;
 }
 
+// Mongo-backed Loan documents serialize their key as `loanId`; older dashboard
+// components consume `id`. Normalize at the API boundary so both sources work.
+function normalizeLoan<T extends Record<string, any>>(loan: T): T & { id: number } {
+  const id = loan.id ?? loan.loanId ?? loan.loanID ?? loan.loan_id;
+  return { ...loan, id: id == null ? Number.NaN : Number(id) };
+}
+
+function normalizeLoanList(value: unknown) {
+  return Array.isArray(value) ? value.map(normalizeLoan) : value;
+}
+
 export const loanApi = {
   async getDashboardData() {
     const res = await apiClient.get('/api/dashboard/data');
-    return res.data;
+    return {
+      ...res.data,
+      loans: normalizeLoanList(res.data?.loans) ?? [],
+      pendingLoans: normalizeLoanList(res.data?.pendingLoans) ?? [],
+      delinquentLoans: normalizeLoanList(res.data?.delinquentLoans) ?? [],
+      activeLoans: normalizeLoanList(res.data?.activeLoans) ?? []
+    };
   },
 
   async getLoanTerms() {
@@ -56,7 +73,9 @@ export const loanApi = {
     const res = await apiClient.get('/api/pay/details', {
       params: { loanId }
     });
-    return res.data;
+    return res.data?.loan
+      ? { ...res.data, loan: normalizeLoan(res.data.loan) }
+      : normalizeLoan(res.data);
   },
 
   async submitPayment(payload: PaymentPayload) {
@@ -81,7 +100,11 @@ export const loanApi = {
 
   async searchLoans(params: SearchLoansParams) {
     const res = await apiClient.get('/api/loan-search', { params });
-    return res.data;
+    const data = res.data;
+    if (Array.isArray(data)) return data.map(normalizeLoan);
+    if (Array.isArray(data?.content)) return { ...data, content: data.content.map(normalizeLoan) };
+    if (Array.isArray(data?.loans)) return { ...data, loans: data.loans.map(normalizeLoan) };
+    return data;
   },
 
   async getCustomerProfile(customerId: string) {

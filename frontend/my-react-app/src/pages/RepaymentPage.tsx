@@ -33,14 +33,15 @@ export const RepaymentPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     async function loadDetails() {
-      if (!loanIdParam) {
+      const parsedLoanId = loanIdParam ? Number(loanIdParam) : Number.NaN;
+      if (!Number.isSafeInteger(parsedLoanId) || parsedLoanId <= 0) {
         setError('No loan account selected for repayment. Please select an active loan from your dashboard.');
         setLoading(false);
         return;
       }
 
       try {
-        const data = await loanApi.getPaymentDetails(Number(loanIdParam));
+        const data = await loanApi.getPaymentDetails(parsedLoanId);
         if (isMounted) {
           const l: Loan = data.loan || data;
           setLoan(l);

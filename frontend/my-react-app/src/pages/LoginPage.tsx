@@ -15,6 +15,7 @@ export const LoginPage: React.FC = () => {
   const { refreshAuth } = useAuth();
 
   const successMessage = (location.state as any)?.message;
+  const loggedOut = new URLSearchParams(location.search).has('logout');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +90,24 @@ export const LoginPage: React.FC = () => {
         }}>
           <ShieldCheck size={18} />
           <span>{successMessage}</span>
+        </div>
+      )}
+
+      {loggedOut && !successMessage && (
+        <div style={{
+          backgroundColor: '#F0FDF4',
+          border: '1px solid #BBF7D0',
+          color: '#166534',
+          padding: '12px 14px',
+          borderRadius: '8px',
+          fontSize: '13px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <ShieldCheck size={18} />
+          <span>You have been logged out securely.</span>
         </div>
       )}
 

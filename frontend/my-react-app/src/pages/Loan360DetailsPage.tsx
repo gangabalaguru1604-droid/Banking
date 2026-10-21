@@ -22,6 +22,7 @@ import { LoanAccountDetailsDTO } from '../types';
 export const Loan360DetailsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const loanId = searchParams.get('loanId') || '';
+  const validLoanId = /^\d+$/.test(loanId) && Number(loanId) > 0;
   const { authState } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -32,8 +33,8 @@ export const Loan360DetailsPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     async function loadLoanDetails() {
-      if (!loanId) {
-        setError('No Loan Account ID provided.');
+      if (!validLoanId) {
+        setError('The loan link is missing a valid loan ID. Return to the dashboard and open the loan again.');
         setLoading(false);
         return;
       }
@@ -54,7 +55,7 @@ export const Loan360DetailsPage: React.FC = () => {
 
     loadLoanDetails();
     return () => { isMounted = false; };
-  }, [loanId]);
+  }, [loanId, validLoanId]);
 
   const formatCurrency = (val: number | undefined) => {
     if (val === undefined || val === null) return '₹0.00';

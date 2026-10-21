@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import jakarta.servlet.ServletException;
@@ -14,9 +15,13 @@ import jakarta.servlet.http.HttpServletResponse;
 public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
 
     private final AuthAuditService auditService;
+    private final String frontendUrl;
 
-    public CustomLogoutSuccessHandler(AuthAuditService auditService) {
+    public CustomLogoutSuccessHandler(
+            AuthAuditService auditService,
+            @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl) {
         this.auditService = auditService;
+        this.frontendUrl = frontendUrl;
     }
 
     @Override
@@ -26,6 +31,7 @@ public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
         String username = authentication != null ? authentication.getName() : "UNKNOWN";
         auditService.logLogout(username, request);
 
-        response.sendRedirect("/login?logout=true");
+        String baseUrl = frontendUrl.replaceAll("/+$", "");
+        response.sendRedirect(baseUrl + "/login?logout=true");
     }
 }
