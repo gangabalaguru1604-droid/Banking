@@ -470,10 +470,14 @@ public class StaffRoleDashboardAndSearchTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("applyLoan"));
 
-        String jspContent = Files.readString(Path.of("src/main/webapp/WEB-INF/pages/applyLoan.jsp"));
-        assertTrue(jspContent.contains("Staff Policy Restriction"), "applyLoan.jsp must have staff policy restriction");
-        assertFalse(jspContent.contains("Originate New Loan"), "applyLoan.jsp must NOT have 'Originate New Loan'");
-        assertFalse(jspContent.contains("Borrower / Customer Email"), "applyLoan.jsp must NOT expose staff borrower email input");
+        Path reactPath = Path.of("../../frontend/my-react-app/src/pages/ApplyLoanPage.tsx");
+        if (!Files.exists(reactPath)) {
+            reactPath = Path.of("frontend/my-react-app/src/pages/ApplyLoanPage.tsx");
+        }
+        String reactContent = Files.readString(reactPath);
+        assertTrue(reactContent.contains("Staff Policy Restriction"), "ApplyLoanPage.tsx must have staff policy restriction");
+        assertFalse(reactContent.contains("Originate New Loan"), "ApplyLoanPage.tsx must NOT have 'Originate New Loan'");
+        assertFalse(reactContent.contains("Borrower / Customer Email"), "ApplyLoanPage.tsx must NOT expose staff borrower email input");
     }
 
     @Test
@@ -483,16 +487,24 @@ public class StaffRoleDashboardAndSearchTests {
                 .with(user(new CustomUserDetails(loanOfficer))))
                 .andExpect(status().isOk());
 
-        String dashboardJsp = Files.readString(Path.of("src/main/webapp/WEB-INF/pages/dashboard.jsp"));
-        assertTrue(dashboardJsp.contains("btn-profile"), "dashboard.jsp must use single Profile action");
-        assertTrue(dashboardJsp.contains("/loan-details?loanId="), "Profile action must navigate to 360 view");
-        assertFalse(dashboardJsp.contains(">360° View<"), "dashboard.jsp must NOT contain separate 360° button");
-        assertFalse(dashboardJsp.contains(">Customer Profile<"), "dashboard.jsp must NOT contain separate Customer Profile button");
-        assertFalse(dashboardJsp.contains("Originate New Loan"), "dashboard.jsp must NOT show Originate New Loan to staff");
+        Path dashboardPath = Path.of("../../frontend/my-react-app/src/pages/StaffDashboard.tsx");
+        if (!Files.exists(dashboardPath)) {
+            dashboardPath = Path.of("frontend/my-react-app/src/pages/StaffDashboard.tsx");
+        }
+        String dashboardContent = Files.readString(dashboardPath);
+        assertTrue(dashboardContent.contains("btn-profile"), "StaffDashboard.tsx must use single Profile action");
+        assertTrue(dashboardContent.contains("/loan-details?loanId="), "Profile action must navigate to 360 view");
+        assertFalse(dashboardContent.contains(">360° View<"), "StaffDashboard.tsx must NOT contain separate 360° button");
+        assertFalse(dashboardContent.contains(">Customer Profile<"), "StaffDashboard.tsx must NOT contain separate Customer Profile button");
+        assertFalse(dashboardContent.contains("Originate New Loan"), "StaffDashboard.tsx must NOT show Originate New Loan to staff");
 
-        String searchJsp = Files.readString(Path.of("src/main/webapp/WEB-INF/pages/loan-search.jsp"));
-        assertTrue(searchJsp.contains("Profile"));
-        assertTrue(searchJsp.contains("/loan-details?loanId="));
-        assertFalse(searchJsp.contains(">360° View<"));
+        Path searchPath = Path.of("../../frontend/my-react-app/src/pages/LoanSearchPage.tsx");
+        if (!Files.exists(searchPath)) {
+            searchPath = Path.of("frontend/my-react-app/src/pages/LoanSearchPage.tsx");
+        }
+        String searchContent = Files.readString(searchPath);
+        assertTrue(searchContent.contains("Profile"));
+        assertTrue(searchContent.contains("/loan-details?loanId="));
+        assertFalse(searchContent.contains(">360° View<"));
     }
 }
