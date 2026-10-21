@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import { getBackendUrl } from '../utils/apiConfig';
 
 export default function HeroSection({ authState }) {
   const { authenticated, user } = authState;
   const [imageError, setImageError] = useState(false);
 
   // If user is logged in, CTA links to their relevant portal; otherwise /register
-  const primaryCtaUrl = authenticated 
+  const primaryCtaPath = authenticated 
     ? (user?.role === 'ROLE_CUSTOMER' ? '/applyLoan' : '/dashboard')
     : '/register';
+  const primaryCtaUrl = getBackendUrl(primaryCtaPath);
 
   const primaryCtaLabel = authenticated
     ? (user?.role === 'ROLE_CUSTOMER' ? 'Apply for a Loan' : 'Go to Dashboard')

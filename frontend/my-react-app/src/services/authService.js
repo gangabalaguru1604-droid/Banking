@@ -3,7 +3,7 @@
  * Connects to Spring Boot backend preserving Spring Security and session handling.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+import { API_BASE_URL, getBackendUrl } from '../utils/apiConfig';
 
 export async function fetchAuthStatus() {
   try {

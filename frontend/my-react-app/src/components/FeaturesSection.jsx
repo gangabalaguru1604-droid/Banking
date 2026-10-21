@@ -1,8 +1,9 @@
 import React from 'react';
+import { getBackendUrl } from '../utils/apiConfig';
 
 export default function FeaturesSection({ authState }) {
   const { authenticated } = authState;
-  const applyUrl = authenticated ? '/applyLoan' : '/register';
+  const applyUrl = getBackendUrl(authenticated ? '/applyLoan' : '/register');
 
   const products = [
     {

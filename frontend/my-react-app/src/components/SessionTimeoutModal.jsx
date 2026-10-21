@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { sendKeepAlive, performLogout } from '../services/authService';
+import { getBackendUrl } from '../utils/apiConfig';
 
 export default function SessionTimeoutModal({ authState }) {
   const { authenticated, csrfToken, csrfHeader, csrfParameter } = authState;
@@ -58,7 +59,7 @@ export default function SessionTimeoutModal({ authState }) {
         if (prev <= 1) {
           clearInterval(timer);
           // Automatic logout on timeout
-          window.location.href = '/login?expired=true';
+          window.location.href = getBackendUrl('/login?expired=true');
           return 0;
         }
         return prev - 1;
@@ -76,7 +77,7 @@ export default function SessionTimeoutModal({ authState }) {
       setModalVisible(false);
     } else {
       // If session expired on server already
-      window.location.href = '/login?expired=true';
+      window.location.href = getBackendUrl('/login?expired=true');
     }
   };
 

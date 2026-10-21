@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { performLogout } from '../services/authService';
+import { getBackendUrl } from '../utils/apiConfig';
 
 export default function Navbar({ authState }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -75,24 +76,24 @@ export default function Navbar({ authState }) {
                 <span className="role-pill">{getRoleLabel(user.role)}</span>
               </div>
 
-              <a href="/dashboard" className="nav-item">Dashboard</a>
+              <a href={getBackendUrl('/dashboard')} className="nav-item">Dashboard</a>
 
               {isStaffOrAdmin && (
-                <a href="/loan-search" className="nav-item">Loan Search</a>
+                <a href={getBackendUrl('/loan-search')} className="nav-item">Loan Search</a>
               )}
 
               {isAdmin && (
                 <>
-                  <a href="/admin/staff" className="nav-item">Staff Management</a>
-                  <a href="/admin/audit-logs" className="nav-item">Audit Trail</a>
-                  <a href="/admin/reminders/demo" className="nav-item nav-item-highlight">
+                  <a href={getBackendUrl('/admin/staff')} className="nav-item">Staff Management</a>
+                  <a href={getBackendUrl('/admin/audit-logs')} className="nav-item">Audit Trail</a>
+                  <a href={getBackendUrl('/admin/reminders/demo')} className="nav-item nav-item-highlight">
                     🔔 DPD Reminders Demo
                   </a>
                 </>
               )}
 
               {isCustomer && (
-                <a href="/applyLoan" className="nav-item nav-item-cta">Apply Loan</a>
+                <a href={getBackendUrl('/applyLoan')} className="nav-item nav-item-cta">Apply Loan</a>
               )}
 
               <button 
@@ -123,8 +124,8 @@ export default function Navbar({ authState }) {
                   setMobileMenuOpen(false);
                 }
               }}>Loan Products</a>
-              <a href="/login" className="nav-item">Login</a>
-              <a href="/register" className="nav-btn-signup">Sign Up</a>
+              <a href={getBackendUrl('/login')} className="nav-item">Login</a>
+              <a href={getBackendUrl('/register')} className="nav-btn-signup">Sign Up</a>
             </>
           )}
         </nav>
