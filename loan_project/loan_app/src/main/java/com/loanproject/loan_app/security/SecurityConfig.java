@@ -75,6 +75,8 @@ public class SecurityConfig {
                     "/mfa-verify",
                     "/mfa-enroll",
                     "/session/keep-alive",
+                    "/health",
+                    "/ping",
                     "/api/webhooks/**",
                     "/css/**",
                     "/js/**",

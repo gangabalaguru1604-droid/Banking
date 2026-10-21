@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patil Capitals - Loan Management System</title>
+    <title>Indian Bank - Loan Management System</title>
     <!-- CSRF Tokens for AJAX -->
     <meta name="_csrf" content="${_csrf.token}"/>
     <meta name="_csrf_header" content="${_csrf.headerName}"/>
@@ -343,7 +343,7 @@
 
 <div class="navbar">
     <div class="logo">
-        <a href="/">🏦 Patil Capitals</a>
+        <a href="/">🏦 Indian Bank</a>
     </div>
 
     <div class="nav">

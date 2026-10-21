@@ -26,10 +26,10 @@ public class LinkedAccount {
     private String accountType = "SAVINGS"; // SAVINGS, CURRENT
 
     @Column(length = 100)
-    private String bankName = "Patil Capitals Auto-Debit Account";
+    private String bankName = "Indian Bank Auto-Debit Account";
 
     @Column(length = 30)
-    private String ifscCode = "PATL0001001";
+    private String ifscCode = "IDIB0001001";
 
     @Column(nullable = false)
     private boolean autoDebitEnabled = true;
@@ -41,10 +41,12 @@ public class LinkedAccount {
         this.loan = loan;
         this.accountNumber = accountNumber;
         this.accountType = accountType != null ? accountType : "SAVINGS";
-        this.bankName = bankName != null ? bankName : "Patil Capitals Auto-Debit Account";
-        this.ifscCode = ifscCode != null ? ifscCode : "PATL0001001";
+        this.bankName = bankName != null ? bankName : "Indian Bank Auto-Debit Account";
+        this.ifscCode = ifscCode != null ? ifscCode : "IDIB0001001";
         this.autoDebitEnabled = autoDebitEnabled;
     }
+
+
 
     public Long getId() {
         return id;

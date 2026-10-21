@@ -20,7 +20,7 @@ public class DefaultSmsReminderProvider implements SmsReminderProvider {
     private static final Logger log = LoggerFactory.getLogger(DefaultSmsReminderProvider.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
 
-    @Value("${sms.provider.sender-id:PATILC}")
+    @Value("${sms.provider.sender-id:IDIBNK}")
     private String senderId;
 
     @Value("${sms.provider.api-key:}")
@@ -56,7 +56,7 @@ public class DefaultSmsReminderProvider implements SmsReminderProvider {
         String helpdesk = request.getHelpdeskNumber() != null ? request.getHelpdeskNumber() : "1800-200-8899";
 
         return String.format(
-                "Dear %s, EMI of Rs.%s for Loan %s is %d day(s) overdue (Due: %s). Penalty: Rs.%s. Total Due: Rs.%s. Pay now: %s or call %s - Patil Capitals",
+                "Dear %s, EMI of Rs.%s for Loan %s is %d day(s) overdue (Due: %s). Penalty: Rs.%s. Total Due: Rs.%s. Pay now: %s or call %s - Indian Bank",
                 request.getCustomerName(),
                 overdue.toPlainString(),
                 request.getMaskedAccountNumber(),
@@ -64,8 +64,9 @@ public class DefaultSmsReminderProvider implements SmsReminderProvider {
                 dueDateStr,
                 penalty.toPlainString(),
                 total.toPlainString(),
-                request.getPaymentUrl() != null ? request.getPaymentUrl() : "https://patilcapitals.com/pay",
+                request.getPaymentUrl() != null ? request.getPaymentUrl() : "https://indianbank.co.in/pay",
                 helpdesk
         );
+
     }
 }

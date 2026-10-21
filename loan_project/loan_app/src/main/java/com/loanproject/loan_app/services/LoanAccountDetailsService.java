@@ -269,8 +269,8 @@ public class LoanAccountDetailsService {
                         loan,
                         "SB" + loan.getUser().getId() + "001234",
                         "SAVINGS",
-                        "Patil Capitals Auto-Debit Account",
-                        "PATL0001001",
+                        "Indian Bank Auto-Debit Account",
+                        "IDIB0001001",
                         true
                 );
                 linked = linkedAccountRepository.save(linked);

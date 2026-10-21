@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: patil-capitals-loan-app
+    name: indian-bank-loan-app
     env: docker
     dockerfilePath: ./Dockerfile
     plan: free
-    region: oregon
-    healthCheckPath: /login
+    region: virginia
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 8080

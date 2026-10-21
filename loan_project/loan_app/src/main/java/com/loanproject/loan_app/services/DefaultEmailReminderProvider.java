@@ -59,7 +59,7 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
     @Value("${reminder.email.api-key:}")
     private String emailApiKey;
 
-    @Value("${reminder.mail.from:reminders@patilcapitals.com}")
+    @Value("${reminder.mail.from:reminders@indianbank.co.in}")
     private String fromEmail;
 
     @Value("${reminder.mail.simulate:false}")
@@ -509,9 +509,9 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
                 + "<div class='btn-container'><a href='" + escapeHtml(paymentUrl) + "' class='btn'>Pay Now Securely</a></div>"
                 + "<p>If you have already made this payment in the past few hours, please ignore this notice as reconciliation may be in progress.</p>"
                 + "<p>For any queries or assistance, contact our Customer Helpdesk at <strong>" + escapeHtml(helpdesk) + "</strong> or visit your nearest branch.</p>"
-                + "<p>Sincerely,<br><strong>Patil Capitals Collections & Accounts Team</strong></p>"
+                + "<p>Sincerely,<br><strong>Indian Bank Collections & Accounts Team</strong></p>"
                 + "</div>"
-                + "<div class='footer'>This is an automated communication from Patil Capitals Loan Management System. Please do not reply directly to this email.</div>"
+                + "<div class='footer'>This is an automated communication from Indian Bank Loan Management System. Please do not reply directly to this email.</div>"
                 + "</div></body></html>";
     }
 

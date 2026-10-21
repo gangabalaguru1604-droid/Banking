@@ -42,7 +42,7 @@
                 <!-- Predefined Loan Product Terms (Standard Bank Policy) -->
                 <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:14px; margin-bottom:16px;">
                     <div style="font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
-                        🏛️ Predefined Loan Terms (Patil Capitals Standard Policy)
+                        🏛️ Predefined Loan Terms (Indian Bank Standard Policy)
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:6px; padding:10px;">
@@ -59,7 +59,7 @@
                         </div>
                     </div>
                     <div style="font-size:11px; color:#64748B; margin-top:8px;">
-                        ℹ️ Rates and tenure are standardized by Patil Capitals policy and calculated automatically upon submission.
+                        ℹ️ Rates and tenure are standardized by Indian Bank policy and calculated automatically upon submission.
                     </div>
                 </div>
 

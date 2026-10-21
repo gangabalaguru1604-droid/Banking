@@ -158,7 +158,7 @@ public class HomeController {
         }
 
         // 6. Generate otpauth URI and QR code
-        String issuer = "Patil Capitals";
+        String issuer = "Indian Bank";
         String otpAuthUrl = totpService.getOtpAuthUrl(user.getEmail(), issuer, pendingSecret);
         String qrCodeDataUri = qrCodeService.generateQrCodeDataUri(otpAuthUrl);
 
@@ -212,7 +212,7 @@ public class HomeController {
         // 4. Rate-limit rapid submission spam (min 500ms between attempts)
         Instant lastAttempt = (Instant) session.getAttribute("PENDING_MFA_ENROLL_LAST_ATTEMPT");
         if (lastAttempt != null && Duration.between(lastAttempt, Instant.now()).toMillis() < 500) {
-            String issuer = "Patil Capitals";
+            String issuer = "Indian Bank";
             String otpAuthUrl = totpService.getOtpAuthUrl(user.getEmail(), issuer, pendingSecret);
             String qrCodeDataUri = qrCodeService.generateQrCodeDataUri(otpAuthUrl);
 
@@ -278,7 +278,7 @@ public class HomeController {
             auditService.logMfaEnrollmentFailure(user.getEmail(), request, "INVALID_OTP");
 
             // Re-populate view with QR code and setup instructions
-            String issuer = "Patil Capitals";
+            String issuer = "Indian Bank";
             String otpAuthUrl = totpService.getOtpAuthUrl(user.getEmail(), issuer, pendingSecret);
             String qrCodeDataUri = qrCodeService.generateQrCodeDataUri(otpAuthUrl);
 
