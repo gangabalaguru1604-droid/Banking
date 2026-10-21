@@ -2,30 +2,39 @@ package com.loanproject.loan_app.repository;
 
 import java.util.List;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import com.loanproject.loan_app.bean.Loan;
 import com.loanproject.loan_app.bean.RepaymentInstallment;
 
 @Repository
-public interface RepaymentInstallmentRepository extends JpaRepository<RepaymentInstallment, Long> {
+public interface RepaymentInstallmentRepository extends MongoRepository<RepaymentInstallment, Long> {
 
     List<RepaymentInstallment> findByLoanOrderByInstallmentNumberAsc(Loan loan);
 
-    List<RepaymentInstallment> findByLoan_LoanIdOrderByInstallmentNumberAsc(Long loanId);
+    default List<RepaymentInstallment> findByLoan_LoanIdOrderByInstallmentNumberAsc(Long loanId) {
+        return findAll().stream().filter(r -> r.getLoan() != null && loanId.equals(r.getLoan().getLoanId()))
+                .sorted(java.util.Comparator.comparingInt(RepaymentInstallment::getInstallmentNumber)).toList();
+    }
 
-    void deleteByLoan(Loan loan);
+    default void deleteByLoan(Loan loan) {
+        deleteAll(findAll().stream().filter(r -> r.getLoan() != null && loan.getLoanId().equals(r.getLoan().getLoanId())).toList());
+    }
 
-    @org.springframework.data.jpa.repository.Query("SELECT r FROM RepaymentInstallment r WHERE r.dueDate BETWEEN :startDate AND :endDate AND r.status <> 'PAID' AND r.paidAmount < r.emiAmount AND r.loan.status NOT IN ('CLOSED', 'REJECTED', 'CANCELLED') ORDER BY r.dueDate ASC, r.id ASC")
-    org.springframework.data.domain.Page<RepaymentInstallment> findEligibleOverdueInstallments(
-            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
-            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate,
-            org.springframework.data.domain.Pageable pageable);
+    default org.springframework.data.domain.Page<RepaymentInstallment> findEligibleOverdueInstallments(
+            java.time.LocalDate startDate, java.time.LocalDate endDate, org.springframework.data.domain.Pageable pageable) {
+        List<RepaymentInstallment> rows = findEligibleOverdueInstallmentsList(startDate, endDate);
+        int start = (int) Math.min(pageable.getOffset(), rows.size());
+        int end = Math.min(start + pageable.getPageSize(), rows.size());
+        return new org.springframework.data.domain.PageImpl<>(rows.subList(start, end), pageable, rows.size());
+    }
 
-    @org.springframework.data.jpa.repository.Query("SELECT r FROM RepaymentInstallment r WHERE r.dueDate BETWEEN :startDate AND :endDate AND r.status <> 'PAID' AND r.paidAmount < r.emiAmount AND r.loan.status NOT IN ('CLOSED', 'REJECTED', 'CANCELLED') ORDER BY r.dueDate ASC, r.id ASC")
-    List<RepaymentInstallment> findEligibleOverdueInstallmentsList(
-            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
-            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+    default List<RepaymentInstallment> findEligibleOverdueInstallmentsList(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return findAll().stream().filter(r -> r.getDueDate() != null && !r.getDueDate().isBefore(startDate) && !r.getDueDate().isAfter(endDate))
+                .filter(r -> !"PAID".equalsIgnoreCase(r.getStatus()) && r.getPaidAmount().compareTo(r.getEmiAmount()) < 0)
+                .filter(r -> r.getLoan() != null && !List.of("CLOSED", "REJECTED", "CANCELLED").contains(r.getLoan().getStatus()))
+                .sorted(java.util.Comparator.comparing(RepaymentInstallment::getDueDate).thenComparing(RepaymentInstallment::getId)).toList();
+    }
 
 }

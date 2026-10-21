@@ -2,83 +2,55 @@ package com.loanproject.loan_app.bean;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "users")
 
-@Entity
-@Table(name = "users")
 public class User {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true)
     private String email;
 
-    @Column(nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50)
     private AppRole role = AppRole.ROLE_CUSTOMER;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50)
     private UserType userType = UserType.CUSTOMER;
 
-    @Column
     private int failedAttemptCount = 0;
 
-    @Column
     private boolean accountNonLocked = true;
 
     private LocalDateTime lockTime;
 
-    @Column
     private boolean mfaEnrolled = false;
 
-    @Column(length = 512)
     private String mfaSecret;
 
-    @Column(length = 20)
     private String mfaType = "TOTP";
 
     private String phoneNumber;
 
-    @Column(length = 50)
     private String branch = "MAIN";
 
-    @Column(length = 50)
     private String customerId;
 
-    @Column(length = 20)
     private String panNumber;
 
-    @Column(length = 20)
     private String aadhaarNumber;
 
     private java.time.LocalDate dateOfBirth;
 
-    @Column(length = 30)
     private String kycStatus = "VERIFIED";
 
-    @Column(length = 255)
     private String address;
 
-    @Column(length = 30)
     private String preferredContactMethod = "EMAIL";
 
-    @Column(name = "contact_detail_update_required", columnDefinition = "boolean default false")
     private boolean contactDetailUpdateRequired = false;
 
     public User() {

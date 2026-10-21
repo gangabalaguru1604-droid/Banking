@@ -2,48 +2,28 @@ package com.loanproject.loan_app.bean;
 
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "auth_audit_logs")
 
-@Entity
-@Table(name = "auth_audit_logs", indexes = {
-    @Index(name = "idx_audit_username", columnList = "username"),
-    @Index(name = "idx_audit_timestamp", columnList = "timestamp"),
-    @Index(name = "idx_audit_event_type", columnList = "eventType")
-})
 public class AuthAuditLog {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @Column(nullable = false, length = 120)
     private String username;
 
-    @Column(nullable = false)
     private Instant timestamp = Instant.now();
 
-    @Column(nullable = false, length = 64)
     private String clientIp;
 
-    @Column(length = 256)
     private String userAgent;
 
-    @Column(nullable = false, length = 50)
     private String eventType;
 
-    @Column(nullable = false, length = 20)
     private String outcome;
 
-    @Column(length = 50)
     private String failureCategory;
 
-    @Column(length = 500)
     private String details;
 
     public AuthAuditLog() {

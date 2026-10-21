@@ -5,14 +5,14 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.domain.PageImpl;
+import java.util.Locale;
 
 import com.loanproject.loan_app.bean.Loan;
 import com.loanproject.loan_app.bean.User;
 
-public interface LoanRepository extends JpaRepository<Loan, Long> {
+public interface LoanRepository extends MongoRepository<Loan, Long> {
 
     List<Loan> findByUser(User user);
 
@@ -20,24 +20,41 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 
     Optional<Loan> findByAccountNumber(String accountNumber);
 
-    @Query("SELECT l FROM Loan l JOIN FETCH l.user WHERE l.accountNumber = :accountNumber AND (:branch = 'ALL' OR l.branch = :branch)")
-    Optional<Loan> findByAccountNumberAndBranchFilter(@Param("accountNumber") String accountNumber, @Param("branch") String branch);
+    default Optional<Loan> findByAccountNumberAndBranchFilter(String accountNumber, String branch) {
+        return findByAccountNumber(accountNumber).filter(l -> inBranch(l, branch));
+    }
 
-    @Query("SELECT l FROM Loan l JOIN FETCH l.user WHERE l.loanId = :loanId AND (:branch = 'ALL' OR l.branch = :branch)")
-    Optional<Loan> findByLoanIdAndBranchFilter(@Param("loanId") Long loanId, @Param("branch") String branch);
+    default Optional<Loan> findByLoanIdAndBranchFilter(Long loanId, String branch) {
+        return findById(loanId).filter(l -> inBranch(l, branch));
+    }
 
     // Customer ID search
-    @Query(value = "SELECT l FROM Loan l JOIN FETCH l.user u WHERE (LOWER(u.customerId) = LOWER(:customerId) OR CAST(u.id AS string) = :customerId) AND (:branch = 'ALL' OR l.branch = :branch)",
-           countQuery = "SELECT COUNT(l) FROM Loan l JOIN l.user u WHERE (LOWER(u.customerId) = LOWER(:customerId) OR CAST(u.id AS string) = :customerId) AND (:branch = 'ALL' OR l.branch = :branch)")
-    Page<Loan> searchByCustomerId(@Param("customerId") String customerId, @Param("branch") String branch, Pageable pageable);
+    default Page<Loan> searchByCustomerId(String customerId, String branch, Pageable pageable) {
+        String q = customerId.toLowerCase(Locale.ROOT);
+        return page(findAll().stream().filter(l -> inBranch(l, branch) && l.getUser() != null &&
+                ((l.getUser().getCustomerId() != null && l.getUser().getCustomerId().toLowerCase(Locale.ROOT).equals(q)) ||
+                 String.valueOf(l.getUser().getId()).equals(q))).toList(), pageable);
+    }
 
     // Phone / Mobile search
-    @Query(value = "SELECT l FROM Loan l JOIN FETCH l.user u WHERE u.phoneNumber = :phone AND (:branch = 'ALL' OR l.branch = :branch)",
-           countQuery = "SELECT COUNT(l) FROM Loan l JOIN l.user u WHERE u.phoneNumber = :phone AND (:branch = 'ALL' OR l.branch = :branch)")
-    Page<Loan> searchByPhone(@Param("phone") String phone, @Param("branch") String branch, Pageable pageable);
+    default Page<Loan> searchByPhone(String phone, String branch, Pageable pageable) {
+        return page(findAll().stream().filter(l -> inBranch(l, branch) && l.getUser() != null && phone.equals(l.getUser().getPhoneNumber())).toList(), pageable);
+    }
 
     // Customer Name search (safe, normalized, case-insensitive)
-    @Query(value = "SELECT l FROM Loan l JOIN FETCH l.user u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%')) AND (:branch = 'ALL' OR l.branch = :branch)",
-           countQuery = "SELECT COUNT(l) FROM Loan l JOIN l.user u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%')) AND (:branch = 'ALL' OR l.branch = :branch)")
-    Page<Loan> searchByName(@Param("name") String name, @Param("branch") String branch, Pageable pageable);
+    default Page<Loan> searchByName(String name, String branch, Pageable pageable) {
+        String q = name.toLowerCase(Locale.ROOT);
+        return page(findAll().stream().filter(l -> inBranch(l, branch) && l.getUser() != null && l.getUser().getName() != null &&
+                l.getUser().getName().toLowerCase(Locale.ROOT).contains(q)).toList(), pageable);
+    }
+
+    private static boolean inBranch(Loan loan, String branch) {
+        return branch == null || "ALL".equalsIgnoreCase(branch) || branch.equalsIgnoreCase(loan.getBranch());
+    }
+
+    private static Page<Loan> page(List<Loan> results, Pageable pageable) {
+        int start = (int) Math.min(pageable.getOffset(), results.size());
+        int end = Math.min(start + pageable.getPageSize(), results.size());
+        return new PageImpl<>(results.subList(start, end), pageable, results.size());
+    }
 }

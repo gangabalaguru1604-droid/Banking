@@ -2,57 +2,35 @@ package com.loanproject.loan_app.bean;
 
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "mfa_challenges")
 
-@Entity
-@Table(name = "mfa_challenges", indexes = {
-    @Index(name = "idx_mfa_challenge_token", columnList = "challengeToken", unique = true)
-})
 public class MfaChallenge {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private User user;
 
-    @Column(nullable = false, unique = true, length = 64)
     private String challengeToken;
 
-    @Column(length = 256)
     private String hashedOtpCode;
 
-    @Column(nullable = false, length = 20)
     private String mfaType = "TOTP";
 
-    @Column(nullable = false)
     private Instant expiryTime;
 
-    @Column(nullable = false)
     private int attemptCount = 0;
 
-    @Column(nullable = false)
     private boolean verified = false;
 
-    @Column(nullable = false)
     private boolean locked = false;
 
-    @Version
+    @org.springframework.data.annotation.Version
     private Long version;
 
-    @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
     public MfaChallenge() {

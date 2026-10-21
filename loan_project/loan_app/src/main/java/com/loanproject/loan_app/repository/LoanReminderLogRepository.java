@@ -4,9 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import com.loanproject.loan_app.bean.Loan;
@@ -14,7 +12,7 @@ import com.loanproject.loan_app.bean.LoanReminderLog;
 import com.loanproject.loan_app.bean.RepaymentInstallment;
 
 @Repository
-public interface LoanReminderLogRepository extends JpaRepository<LoanReminderLog, Long> {
+public interface LoanReminderLogRepository extends MongoRepository<LoanReminderLog, Long> {
 
     Optional<LoanReminderLog> findByInstallmentAndDpdDayAndChannelAndReminderCycle(
             RepaymentInstallment installment, int dpdDay, String channel, String reminderCycle);
@@ -28,14 +26,19 @@ public interface LoanReminderLogRepository extends JpaRepository<LoanReminderLog
 
     List<LoanReminderLog> findByInstallmentAndStatusIn(RepaymentInstallment installment, Collection<String> statuses);
 
-    List<LoanReminderLog> findByLoan_LoanIdOrderByCreatedAtDesc(Long loanId);
+    default List<LoanReminderLog> findByLoan_LoanIdOrderByCreatedAtDesc(Long loanId) {
+        return findAll().stream().filter(r -> r.getLoan() != null && loanId.equals(r.getLoan().getLoanId()))
+                .sorted(java.util.Comparator.comparing(LoanReminderLog::getCreatedAt).reversed()).toList();
+    }
 
-    @Query("SELECT r FROM LoanReminderLog r WHERE r.loan = :loan AND r.installment = :installment AND r.dpdDay = :dpdDay AND r.status IN ('SENT', 'ACCEPTED', 'DELIVERED', 'OPENED')")
-    List<LoanReminderLog> findSuccessfulReminders(
-            @Param("loan") Loan loan,
-            @Param("installment") RepaymentInstallment installment,
-            @Param("dpdDay") int dpdDay);
+    default List<LoanReminderLog> findSuccessfulReminders(Loan loan, RepaymentInstallment installment, int dpdDay) {
+        return findAll().stream().filter(r -> r.getInstallment() != null && installment.getId().equals(r.getInstallment().getId()) && r.getDpdDay() == dpdDay &&
+                        r.getLoan() != null && loan.getLoanId().equals(r.getLoan().getLoanId()) &&
+                        List.of("SENT", "ACCEPTED", "DELIVERED", "OPENED").contains(r.getStatus())).toList();
+    }
 
-    @Query("SELECT r FROM LoanReminderLog r WHERE r.loan.id = :loanId AND r.status IN ('CLAIMED', 'SENT', 'ACCEPTED')")
-    List<LoanReminderLog> findActiveRemindersByLoanId(@Param("loanId") Long loanId);
+    default List<LoanReminderLog> findActiveRemindersByLoanId(Long loanId) {
+        return findByLoan_LoanIdOrderByCreatedAtDesc(loanId).stream()
+                .filter(r -> List.of("CLAIMED", "SENT", "ACCEPTED").contains(r.getStatus())).toList();
+    }
 }

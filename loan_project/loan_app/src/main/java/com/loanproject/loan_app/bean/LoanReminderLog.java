@@ -2,51 +2,37 @@ package com.loanproject.loan_app.bean;
 
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-
 /**
  * Persists loan repayment reminder attempt records, channel dispatch status,
  * provider delivery callbacks, and contact-detail update flags.
  */
-@Entity
-@Table(name = "loan_reminder_logs", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_reminder_inst_dpd_channel_cycle", columnNames = {"installment_id", "dpd_day", "channel", "reminder_cycle"})
-})
+@org.springframework.data.mongodb.core.mapping.Document(collection = "loan_reminder_logs")
+@org.springframework.data.mongodb.core.index.CompoundIndex(name = "uk_reminder_inst_dpd_channel_cycle", def = "{'installmentId': 1, 'dpdDay': 1, 'channel': 1, 'reminderCycle': 1}", unique = true)
+
 public class LoanReminderLog {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private Loan loan;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private RepaymentInstallment installment;
 
-    @Column(name = "dpd_day", nullable = false)
+    private Long installmentId;
+
     private int dpdDay;
 
-    @Column(name = "reminder_cycle", length = 50, nullable = false)
     private String reminderCycle;
 
-    @Column(length = 20, nullable = false)
     private String channel; // EMAIL, SMS
 
-    @Column(length = 30, nullable = false)
     private String status; // CLAIMED, SENT, DELIVERED, BOUNCED, OPENED, FAILED, CANCELLED
 
-    @Column(length = 255)
     private String recipientReference;
 
     private Instant sentTimestamp;
@@ -54,22 +40,16 @@ public class LoanReminderLog {
     private Instant openedTimestamp;
     private Instant bouncedTimestamp;
 
-    @Column(length = 100)
     private String providerMessageId;
 
-    @Column(length = 1000)
     private String failureDetails;
 
-    @Column(nullable = false)
     private boolean contactDetailUpdateRequired = false;
 
-    @Column(nullable = false)
     private int retryCount = 0;
 
-    @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
     public LoanReminderLog() {
@@ -78,7 +58,7 @@ public class LoanReminderLog {
     public LoanReminderLog(Loan loan, RepaymentInstallment installment, int dpdDay, String reminderCycle,
                            String channel, String status, String recipientReference) {
         this.loan = loan;
-        this.installment = installment;
+        this.setInstallment(installment);
         this.dpdDay = dpdDay;
         this.reminderCycle = reminderCycle;
         this.channel = channel;
@@ -88,7 +68,6 @@ public class LoanReminderLog {
         this.updatedAt = Instant.now();
     }
 
-    @PrePersist
     public void onPrePersist() {
         if (createdAt == null) {
             createdAt = Instant.now();
@@ -98,7 +77,6 @@ public class LoanReminderLog {
         }
     }
 
-    @PreUpdate
     public void onPreUpdate() {
         updatedAt = Instant.now();
     }
@@ -127,7 +105,12 @@ public class LoanReminderLog {
 
     public void setInstallment(RepaymentInstallment installment) {
         this.installment = installment;
+        this.installmentId = installment != null ? installment.getId() : null;
     }
+
+    public Long getInstallmentId() { return installmentId; }
+
+    public void setInstallmentId(Long installmentId) { this.installmentId = installmentId; }
 
     public int getDpdDay() {
         return dpdDay;

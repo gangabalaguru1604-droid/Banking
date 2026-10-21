@@ -295,7 +295,7 @@ public class DpdReminderService {
         );
 
         try {
-            LoanReminderLog saved = reminderLogRepository.saveAndFlush(logEntry);
+            LoanReminderLog saved = reminderLogRepository.save(logEntry);
             return saved.getId();
         } catch (DataIntegrityViolationException ex) {
             log.info("Concurrent claim prevented by DB unique constraint for installment {} day {}", installmentId, dpdDay);

@@ -3,38 +3,27 @@ package com.loanproject.loan_app.bean;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "payment_transactions")
 
-@Entity
-@Table(name = "payment_transactions")
 public class PaymentTransaction {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private Loan loan;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
-    @Column(nullable = false)
     private Instant paymentDate = Instant.now();
 
-    @Column(length = 30, nullable = false)
     private String paymentMode = "UPI"; // NACH, UPI, NET_BANKING, CASH
 
-    @Column(length = 100, nullable = false, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true)
     private String transactionReference;
 
-    @Column(length = 30, nullable = false)
     private String status = "SUCCESS"; // SUCCESS, PENDING, FAILED
 
     public PaymentTransaction() {

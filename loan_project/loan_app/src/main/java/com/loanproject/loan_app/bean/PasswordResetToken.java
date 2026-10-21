@@ -2,41 +2,25 @@ package com.loanproject.loan_app.bean;
 
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "password_reset_tokens")
 
-@Entity
-@Table(name = "password_reset_tokens", indexes = {
-    @Index(name = "idx_password_reset_hash", columnList = "tokenHash", unique = true)
-})
 public class PasswordResetToken {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private User user;
 
-    @Column(nullable = false, unique = true, length = 64)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true)
     private String tokenHash;
 
-    @Column(nullable = false)
     private Instant expiryTime;
 
-    @Column(nullable = false)
     private boolean used = false;
 
-    @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
     public PasswordResetToken() {

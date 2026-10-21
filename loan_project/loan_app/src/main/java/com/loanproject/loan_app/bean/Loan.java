@@ -1,16 +1,11 @@
 package com.loanproject.loan_app.bean;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "loans")
 
-@Entity 
 public class Loan {
- 
-    @Id
-    @GeneratedValue
+
+    @org.springframework.data.annotation.Id
+
     private Long loanId;
 
     private double amount;
@@ -19,19 +14,15 @@ public class Loan {
     private double emi;
     private double remaining;
 
-    @Column(length = 50, unique = true)
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true, sparse = true)
     private String accountNumber;
 
-    @Column(length = 50)
     private String branch = "MAIN";
 
-    @Column(length = 30)
     private String status = "ACTIVE";
 
-    @Column(length = 50)
     private String productType = "Personal Loan";
 
-    @Column(length = 20)
     private String interestType = "FIXED";
 
     private double disbursedAmount;
@@ -40,7 +31,8 @@ public class Loan {
 
     private java.time.Instant createdAt = java.time.Instant.now();
 
-    @ManyToOne
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private User user;
 
 	public Long getLoanId() {

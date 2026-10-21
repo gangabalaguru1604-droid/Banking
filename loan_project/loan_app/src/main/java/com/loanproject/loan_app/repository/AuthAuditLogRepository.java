@@ -2,11 +2,11 @@ package com.loanproject.loan_app.repository;
 
 import java.util.List;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
 import com.loanproject.loan_app.bean.AuthAuditLog;
 
-public interface AuthAuditLogRepository extends JpaRepository<AuthAuditLog, Long> {
+public interface AuthAuditLogRepository extends MongoRepository<AuthAuditLog, Long> {
 
     List<AuthAuditLog> findTop100ByOrderByTimestampDesc();
 

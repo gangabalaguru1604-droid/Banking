@@ -3,47 +3,32 @@ package com.loanproject.loan_app.bean;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "repayment_installments")
 
-@Entity
-@Table(name = "repayment_installments")
 public class RepaymentInstallment {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private Loan loan;
 
-    @Column(nullable = false)
     private int installmentNumber;
 
-    @Column(nullable = false)
     private LocalDate dueDate;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal emiAmount;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal principalComponent;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal interestComponent;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
-    @Column(length = 20, nullable = false)
     private String status = "DUE"; // PAID, DUE, OVERDUE
 
-    @Column(nullable = false)
     private int dpd = 0; // Days Past Due
 
     public RepaymentInstallment() {

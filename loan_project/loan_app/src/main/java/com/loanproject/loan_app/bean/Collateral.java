@@ -2,35 +2,24 @@ package com.loanproject.loan_app.bean;
 
 import java.math.BigDecimal;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "collaterals")
 
-@Entity
-@Table(name = "collaterals")
 public class Collateral {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private Loan loan;
 
-    @Column(nullable = false, length = 100)
     private String collateralType; // e.g. Real Estate, Vehicle, Fixed Deposit, Gold
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal collateralValue;
 
-    @Column(length = 255)
     private String description;
 
-    @Column(length = 30)
     private String status = "PLEDGED"; // PLEDGED, RELEASED, INVOKED
 
     public Collateral() {

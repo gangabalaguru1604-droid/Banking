@@ -13,8 +13,8 @@ services:
         value: "false"
       - key: TRUSTED_PROXIES_ENABLED
         value: "true"
-      # Set your Railway PostgreSQL connection string here or in the Render Dashboard
-      - key: DATABASE_URL
+      # Set the MongoDB Atlas connection string in the Render Dashboard
+      - key: MONGODB_URI
         sync: false
       # Mail notifications configuration
       - key: MAIL_HOST

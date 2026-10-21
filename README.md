@@ -1,6 +1,6 @@
 # 💰 Loan Management System
 
-> A full-stack web application for managing loan applications, EMI calculations, repayments, and outstanding loan balances — built with **Java, Spring Boot, Spring Data JPA, MySQL, and JSP**.
+> A full-stack web application for managing loan applications, EMI calculations, repayments, and outstanding loan balances — built with **Java, Spring Boot, Spring Data MongoDB, and JSP**.
 
 ---
 
@@ -26,7 +26,7 @@ The project follows a **layered architecture** using Spring Boot, with separate 
 ### 🏦 Loan Management
 
 * Apply for a new loan
-* Store loan details in MySQL
+* Store loan details in MongoDB
 * View active loan information
 * Associate loans with users
 * Track outstanding loan balance
@@ -41,11 +41,11 @@ The project follows a **layered architecture** using Spring Boot, with separate 
 
 ### 🗄️ Database Management
 
-* MySQL database integration
-* Spring Data JPA
-* Hibernate ORM
-* Entity relationships
-* Automatic database table creation/update
+* MongoDB database integration
+* Spring Data MongoDB
+* MongoDB document mapping
+* Document references
+* Automatic index creation
 
 ---
 
@@ -56,10 +56,10 @@ The project follows a **layered architecture** using Spring Boot, with separate 
 | **Language**        | Java 17                                     |
 | **Backend**         | Spring Boot 3.5.10                          |
 | **Web Framework**   | Spring MVC                                  |
-| **ORM**             | Hibernate                                   |
-| **Data Access**     | Spring Data JPA                             |
+| **Persistence**     | Spring Data MongoDB                        |
+| **Data Access**     | Spring Data MongoDB                             |
 | **Frontend**        | JSP, HTML, CSS                              |
-| **Database**        | MySQL                                       |
+| **Database**        | MongoDB                                       |
 | **Build Tool**      | Maven                                       |
 | **Version Control** | Git & GitHub                                |
 | **IDE**             | Eclipse / Spring Tool Suite / IntelliJ IDEA |
@@ -91,12 +91,12 @@ The application follows a clean **Layered Architecture**:
                                ▼
                     ┌──────────────────────┐
                     │      Repository      │
-                    │   Spring Data JPA    │
+                    │   Spring Data MongoDB    │
                     └──────────┬───────────┘
                                │
                                ▼
                     ┌──────────────────────┐
-                    │       MySQL          │
+                    │       MongoDB          │
                     │      Database        │
                     └──────────────────────┘
 ```
@@ -200,7 +200,7 @@ loan_app
                ▼                 │
         ┌─────────────┐          │
         │ Loan Stored │◄─────────┘
-        │  in MySQL   │
+        │  in MongoDB   │
         └──────┬──────┘
                │
                ▼
@@ -246,7 +246,7 @@ This provides users with an estimated monthly repayment amount before managing t
 
 # 🗃️ Database Design
 
-The application uses **MySQL** with JPA/Hibernate.
+The application uses **MongoDB** with Spring Data MongoDB.
 
 ### User
 
@@ -323,42 +323,16 @@ cd loan-management-system
 
 ---
 
-## 2️⃣ Create MySQL Database
+## 2 Configure MongoDB
 
-Start MySQL and execute:
-
-```sql
-CREATE DATABASE loan_db;
-```
-
----
-
-## 3️⃣ Configure Database
-
-Open:
-
-```text
-src/main/resources/application.properties
-```
-
-Configure your local MySQL credentials:
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/loan_db
-spring.datasource.username=root
-spring.datasource.password=YOUR_PASSWORD
-
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-```
-
-> ⚠️ **Security:** Never commit your actual database password to GitHub.
-
-For production, use environment variables or external configuration.
+For local development, the application defaults to `mongodb://localhost:27017/Bank-application`.
+For a cloud MongoDB provider such as Atlas, set `MONGODB_URI` or
+`SPRING_DATA_MONGODB_URI` to the provider connection string. Never commit database
+credentials to Git. On Render, set `MONGODB_URI` as a secret environment variable.
 
 ---
 
-## 4️⃣ Build the Project
+## 4 Build the Project
 
 Using Maven:
 
@@ -467,11 +441,8 @@ Spring MVC
   ↓
 Service Layer
   ↓
-Spring Data JPA
-  ↓
-Hibernate
-  ↓
-MySQL
+Spring Data MongoDB
+MongoDB
   ↓
 JSP
 ```
@@ -483,7 +454,7 @@ JSP
 * Layered Architecture
 * Dependency Injection
 * Inversion of Control
-* JPA/Hibernate ORM
+* Spring Data MongoDB repositories
 * Entity Relationships
 * CRUD Operations
 * Database Integration
@@ -498,9 +469,9 @@ JSP
 
 ⭐ **Java 17 + Spring Boot** backend
 
-⭐ **Spring Data JPA + Hibernate** for persistence
+⭐ **Spring Data MongoDB** for persistence
 
-⭐ **MySQL** relational database
+⭐ **MongoDB** document database
 
 ⭐ **JSP-based web interface**
 
@@ -520,7 +491,7 @@ JSP
 
 ## Onkar Karande
 
-**Java Developer | Spring Boot | MySQL | Full Stack Development**
+**Java Developer | Spring Boot | MongoDB | Full Stack Development**
 
 Interested in building scalable and maintainable web applications using Java and modern software development practices.
 

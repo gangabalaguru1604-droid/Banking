@@ -1,37 +1,25 @@
 package com.loanproject.loan_app.bean;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "guarantors")
 
-@Entity
-@Table(name = "guarantors")
 public class Guarantor {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private Loan loan;
 
-    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(length = 50)
     private String relationship;
 
-    @Column(length = 20)
     private String phone;
 
-    @Column(length = 100)
     private String email;
 
-    @Column(length = 20)
     private String pan;
 
     public Guarantor() {

@@ -1,37 +1,25 @@
 package com.loanproject.loan_app.bean;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "linked_accounts")
 
-@Entity
-@Table(name = "linked_accounts")
 public class LinkedAccount {
 
-    @Id
-    @GeneratedValue
+    @org.springframework.data.annotation.Id
+
     private Long id;
 
-    @ManyToOne(optional = false)
-    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @org.springframework.data.mongodb.core.mapping.DBRef
+
     private Loan loan;
 
-    @Column(nullable = false, length = 50)
     private String accountNumber;
 
-    @Column(nullable = false, length = 30)
     private String accountType = "SAVINGS"; // SAVINGS, CURRENT
 
-    @Column(length = 100)
     private String bankName = "Indian Bank Auto-Debit Account";
 
-    @Column(length = 30)
     private String ifscCode = "IDIB0001001";
 
-    @Column(nullable = false)
     private boolean autoDebitEnabled = true;
 
     public LinkedAccount() {
@@ -45,8 +33,6 @@ public class LinkedAccount {
         this.ifscCode = ifscCode != null ? ifscCode : "IDIB0001001";
         this.autoDebitEnabled = autoDebitEnabled;
     }
-
-
 
     public Long getId() {
         return id;
