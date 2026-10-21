@@ -1,25 +1,23 @@
-# Multi-stage Docker build for Indian Bank Loan App from repository root
+
+# Build stage
 FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy Maven project descriptor and source
-COPY loan_project/loan_app/pom.xml .
-COPY loan_project/loan_app/src ./src
+COPY pom.xml .
+COPY src ./src
 
-# Build package without running tests during image build
 RUN mvn clean package -DskipTests
 
-# Lightweight JRE runtime stage
+# Runtime stage
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Copy built war from build stage
 COPY --from=build /app/target/*.war app.war
 
-# Default cloud port exposed
+ENV PORT=8080
+
 EXPOSE 8080
 
-# Run Spring Boot app with dynamic port assigned by Render/Cloud provider and optimized JVM memory for Render 512MB RAM limit
-CMD ["sh", "-c", "java ${JAVA_OPTS:--Xms64m -Xmx192m -XX:+UseSerialGC -Xss512k -XX:MetaspaceSize=96m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:+ExitOnOutOfMemoryError} -Dserver.port=${PORT:-8080} -jar app.war"]
+CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.war"]
