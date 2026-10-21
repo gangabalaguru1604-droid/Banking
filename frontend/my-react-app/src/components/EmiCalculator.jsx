@@ -1,4 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import { getBackendUrl } from '../utils/apiConfig';
+
+// Reusable currency formatter instantiated once to avoid garbage collection churn during slider drag
+const inrCurrencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0
+});
 
 export default function EmiCalculator({ authState }) {
   const { authenticated } = authState;
@@ -31,15 +39,9 @@ export default function EmiCalculator({ authState }) {
     };
   }, [amount, interestRate, tenureMonths]);
 
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(val);
-  };
+  const formatCurrency = (val) => inrCurrencyFormatter.format(val);
 
-  const applyUrl = authenticated ? `/applyLoan` : `/register`;
+  const applyUrl = getBackendUrl(authenticated ? '/applyLoan' : '/register');
 
   return (
     <section id="calculator" className="calculator-section">

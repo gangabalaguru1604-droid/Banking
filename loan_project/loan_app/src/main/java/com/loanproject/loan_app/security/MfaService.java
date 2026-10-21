@@ -52,11 +52,16 @@ public class MfaService {
         }
 
         // Rate limiting: prevent spamming challenge creation (minimum 5 seconds between creations)
+        Instant now = Instant.now();
+        if (lastCreationTimeByUser.size() > 500) {
+            lastCreationTimeByUser.entrySet().removeIf(e -> Duration.between(e.getValue(), now).getSeconds() > 60);
+        }
+
         Instant lastCreation = lastCreationTimeByUser.get(user.getId());
-        if (lastCreation != null && Duration.between(lastCreation, Instant.now()).getSeconds() < 5) {
+        if (lastCreation != null && Duration.between(lastCreation, now).getSeconds() < 5) {
             throw new IllegalStateException("Please wait before requesting another authentication challenge");
         }
-        lastCreationTimeByUser.put(user.getId(), Instant.now());
+        lastCreationTimeByUser.put(user.getId(), now);
 
         String type = preferredType != null ? preferredType : user.getMfaType();
         if (type == null || !providers.containsKey(type)) {

@@ -17,6 +17,8 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
 
     List<PaymentTransaction> findByLoanInOrderByPaymentDateDesc(List<Loan> loans);
 
+    List<PaymentTransaction> findTop5ByLoanInOrderByPaymentDateDesc(List<Loan> loans);
+
     java.util.Optional<PaymentTransaction> findByTransactionReference(String transactionReference);
 
     boolean existsByTransactionReference(String transactionReference);

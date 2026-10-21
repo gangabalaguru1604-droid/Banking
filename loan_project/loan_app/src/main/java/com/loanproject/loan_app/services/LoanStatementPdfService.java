@@ -237,12 +237,15 @@ public class LoanStatementPdfService {
             footer.setAlignment(Element.ALIGN_CENTER);
             document.add(footer);
 
-            document.close();
             return out.toByteArray();
 
         } catch (DocumentException e) {
             log.error("Error generating loan statement PDF for loanId: {}", details.getLoanId(), e);
             throw new RuntimeException("Failed to generate loan statement PDF", e);
+        } finally {
+            if (document != null && document.isOpen()) {
+                document.close();
+            }
         }
     }
 

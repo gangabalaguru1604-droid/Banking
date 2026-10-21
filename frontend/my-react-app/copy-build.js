@@ -11,6 +11,10 @@ const targetDir = path.resolve(__dirname, '../../loan_project/loan_app/src/main/
 if (fs.existsSync(sourceDir)) {
   try {
     if (fs.existsSync(path.dirname(targetDir))) {
+      const targetAssets = path.join(targetDir, 'assets');
+      if (fs.existsSync(targetAssets)) {
+        fs.rmSync(targetAssets, { recursive: true, force: true });
+      }
       fs.cpSync(sourceDir, targetDir, { recursive: true });
       console.log(`[Build Sync] Successfully synced React production build to ${targetDir}`);
     } else {

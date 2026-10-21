@@ -73,12 +73,18 @@ public class PasswordResetService {
         String cleanEmail = email.trim().toLowerCase();
 
         // Rate limiting check: 1 request every 10 seconds per email
+        Instant now = Instant.now();
+        // Memory safety: Prune entries older than 60 seconds when map grows to prevent unbounded memory retention
+        if (rateLimitMap.size() > 500) {
+            rateLimitMap.entrySet().removeIf(e -> Duration.between(e.getValue(), now).getSeconds() > 60);
+        }
+
         Instant lastRequest = rateLimitMap.get(cleanEmail);
-        if (lastRequest != null && Duration.between(lastRequest, Instant.now()).getSeconds() < 10) {
+        if (lastRequest != null && Duration.between(lastRequest, now).getSeconds() < 10) {
             log.warn("Rate limited password reset request for {}", cleanEmail);
             return genericMessage;
         }
-        rateLimitMap.put(cleanEmail, Instant.now());
+        rateLimitMap.put(cleanEmail, now);
 
         Optional<User> optionalUser = userRepository.findByEmail(cleanEmail);
         if (optionalUser.isPresent()) {

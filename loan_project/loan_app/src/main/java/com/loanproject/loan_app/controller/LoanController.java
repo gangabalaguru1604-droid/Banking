@@ -387,10 +387,10 @@ public class LoanController {
                     "LOAN_EVENT", title, desc, ts, st, amt, badge, icon));
         }
 
-        // 2. Persisted repayment transaction history
+        // 2. Persisted repayment transaction history (bounded to top 5 to prevent memory bloat)
         try {
             java.util.List<com.loanproject.loan_app.bean.PaymentTransaction> txns =
-                    paymentTransactionRepository.findByLoanInOrderByPaymentDateDesc(customerLoans);
+                    paymentTransactionRepository.findTop5ByLoanInOrderByPaymentDateDesc(customerLoans);
             if (txns != null) {
                 for (com.loanproject.loan_app.bean.PaymentTransaction t : txns) {
                     String accNum = t.getLoan() != null && t.getLoan().getAccountNumber() != null

@@ -20,15 +20,20 @@ export default function SessionTimeoutModal({ authState }) {
       return;
     }
 
+    let lastThrottledTime = 0;
     const resetInactivity = () => {
-      if (!modalVisibleRef.current) {
+      const now = Date.now();
+      // Throttle updates: avoid triggering on every single mouse pixel movement
+      if (now - lastThrottledTime > 5000 && !modalVisibleRef.current) {
+        lastThrottledTime = now;
         inactivityTimerRef.current = 0;
       }
     };
 
-    window.addEventListener('mousemove', resetInactivity);
-    window.addEventListener('keydown', resetInactivity);
-    window.addEventListener('click', resetInactivity);
+    const listenerOptions = { passive: true };
+    window.addEventListener('mousemove', resetInactivity, listenerOptions);
+    window.addEventListener('keydown', resetInactivity, listenerOptions);
+    window.addEventListener('click', resetInactivity, listenerOptions);
 
     // Heartbeat ticker checks inactivity every second
     const interval = setInterval(() => {
