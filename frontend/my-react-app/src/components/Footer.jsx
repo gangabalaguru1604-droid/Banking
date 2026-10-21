@@ -1,4 +1,5 @@
 import React from 'react';
+import { getBackendUrl } from '../utils/apiConfig';
 
 export default function Footer() {
   return (
@@ -30,10 +31,10 @@ export default function Footer() {
         <div className="footer-links-col">
           <h4 className="footer-heading">Services</h4>
           <ul className="footer-link-list">
-            <li><a href="/applyLoan">Apply for a Loan</a></li>
+            <li><a href={getBackendUrl('/applyLoan')}>Apply for a Loan</a></li>
             <li><a href="/#calculator">EMI Calculator</a></li>
-            <li><a href="/login">Customer Portal</a></li>
-            <li><a href="/dashboard">Repayment Schedule</a></li>
+            <li><a href={getBackendUrl('/login')}>Customer Portal</a></li>
+            <li><a href={getBackendUrl('/dashboard')}>Repayment Schedule</a></li>
           </ul>
         </div>
 
@@ -41,10 +42,10 @@ export default function Footer() {
         <div className="footer-links-col">
           <h4 className="footer-heading">Portals & Security</h4>
           <ul className="footer-link-list">
-            <li><a href="/login">Staff Sign In</a></li>
-            <li><a href="/register">Open New Account</a></li>
-            <li><a href="/forgot-password">Reset Password</a></li>
-            <li><a href="/mfa-verify">MFA Authentication</a></li>
+            <li><a href={getBackendUrl('/login')}>Staff Sign In</a></li>
+            <li><a href={getBackendUrl('/register')}>Open New Account</a></li>
+            <li><a href={getBackendUrl('/forgot-password')}>Reset Password</a></li>
+            <li><a href={getBackendUrl('/mfa-verify')}>MFA Authentication</a></li>
           </ul>
         </div>
 
@@ -67,11 +68,11 @@ export default function Footer() {
         <div className="footer-bottom-inner">
           <p>© {new Date().getFullYear()} Bank of India. All rights reserved. Smart Loan Management System.</p>
           <div className="bottom-links">
-            <a href="/jsp-home">Legacy JSP View</a>
+            <a href={getBackendUrl('/jsp-home')}>Legacy JSP View</a>
             <span>•</span>
-            <a href="/login">Security Center</a>
+            <a href={getBackendUrl('/login')}>Security Center</a>
             <span>•</span>
-            <a href="/health">System Status</a>
+            <a href={getBackendUrl('/health')}>System Status</a>
           </div>
         </div>
       </div>

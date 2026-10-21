@@ -150,10 +150,10 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowedOriginPatterns(java.util.List.of(
-            "http://localhost:5173", 
-            "http://localhost:3000", 
-            "http://127.0.0.1:5173",
-            "http://localhost:10000"
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "https://*.onrender.com",
+            "http://*.onrender.com"
         ));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(java.util.List.of("*"));

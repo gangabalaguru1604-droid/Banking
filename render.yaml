@@ -45,3 +45,19 @@ services:
       - key: REMINDER_MAIL_SIMULATE
         value: "false"
 
+  # Standalone Frontend Static Site on Render
+  - type: static
+    name: indian-bank-loan-frontend
+    plan: free
+    region: virginia
+    rootDir: frontend/my-react-app
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://indian-bank-loan-app.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
