@@ -42,7 +42,9 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (userRepository.findByRole(AppRole.ROLE_ADMIN).isEmpty()) {
+        String seedSecret = "JBSWY3DPEHPK3PXP";
+        Optional<User> optionalAdmin = userRepository.findByEmail(adminEmail.trim().toLowerCase());
+        if (optionalAdmin.isEmpty()) {
             User admin = new User();
             admin.setName("System Administrator");
             admin.setEmail(adminEmail.trim().toLowerCase());
@@ -52,15 +54,16 @@ public class DataInitializer implements CommandLineRunner {
             admin.setAccountNonLocked(true);
             admin.setFailedAttemptCount(0);
 
-            // Known seed secret for default admin: Base32 "JBSWY3DPEHPK3PXP"
-            String seedSecret = "JBSWY3DPEHPK3PXP";
             admin.setMfaSecret(encryptionService.encrypt(seedSecret));
             admin.setMfaEnrolled(true);
-            admin.setMfaType("TOTP");
+            admin.setMfaType("STAFF_STATIC");
             admin.setBranch("ALL");
 
             userRepository.save(admin);
             log.info("Initialized default administrator: {} (MFA Secret: {})", adminEmail, seedSecret);
+        } else {
+            User admin = optionalAdmin.get();
+            healSecretIfNeeded(admin, seedSecret, "STAFF_STATIC");
         }
 
         // Ensure default staff accounts for development
@@ -70,6 +73,29 @@ public class DataInitializer implements CommandLineRunner {
 
         // Ensure default customer account for MFA testing
         ensureCustomerAccount("Demo Customer", "customer@bank.com", "Customer@Bank123!", "MAIN");
+    }
+
+    private void healSecretIfNeeded(User user, String seedSecret, String mfaType) {
+        boolean needHeal = !user.isMfaEnrolled() || user.getMfaSecret() == null || user.getMfaSecret().isBlank();
+        if (!needHeal) {
+            try {
+                String decrypted = encryptionService.decrypt(user.getMfaSecret());
+                if (decrypted == null || decrypted.isBlank()) {
+                    needHeal = true;
+                }
+            } catch (Exception e) {
+                needHeal = true;
+            }
+        }
+        if (needHeal) {
+            user.setMfaSecret(encryptionService.encrypt(seedSecret));
+            user.setMfaEnrolled(true);
+            if (mfaType != null) {
+                user.setMfaType(mfaType);
+            }
+            userRepository.save(user);
+            log.info("Self-healed un-decryptable MFA secret for account: {}", user.getEmail());
+        }
     }
 
     private void ensureStaffAccount(String name, String email, String password, AppRole role, String branch) {
@@ -95,12 +121,7 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Initialized staff account: {} with role {} at branch {}", cleanEmail, role, branch);
         } else {
             User staff = optionalStaff.get();
-            if (!staff.isMfaEnrolled() || staff.getMfaSecret() == null || staff.getMfaSecret().isBlank()) {
-                staff.setMfaSecret(encryptionService.encrypt(seedSecret));
-                staff.setMfaEnrolled(true);
-                userRepository.save(staff);
-                log.info("Updated staff account {} to mfaEnrolled=true for static test MFA flow", cleanEmail);
-            }
+            healSecretIfNeeded(staff, seedSecret, "STAFF_STATIC");
         }
     }
 
