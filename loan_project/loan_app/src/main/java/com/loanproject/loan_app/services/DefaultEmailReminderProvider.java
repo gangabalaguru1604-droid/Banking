@@ -62,8 +62,21 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
     @Value("${reminder.mail.from:reminders@indianbank.co.in}")
     private String fromEmail;
 
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
     @Value("${reminder.mail.simulate:false}")
     private boolean simulateSend;
+
+    public String getEffectiveFromEmail() {
+        if (fromEmail != null && !fromEmail.trim().isBlank()) {
+            return fromEmail.trim();
+        }
+        if (mailUsername != null && !mailUsername.trim().isBlank()) {
+            return mailUsername.trim();
+        }
+        return "reminders@indianbank.co.in";
+    }
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -131,7 +144,7 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         if (emailApiUrl != null && !emailApiUrl.isBlank()) {
             return "HTTP_REST";
         }
-        if (mailSender != null) {
+        if (mailSender != null && mailUsername != null && !mailUsername.isBlank()) {
             return "SMTP";
         }
         return "SIMULATED";
@@ -141,7 +154,7 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         log.info("Dispatching reminder email via HTTPS Resend API to recipient {}", maskedEmail);
         try {
             Map<String, Object> payload = Map.of(
-                    "from", fromEmail,
+                    "from", getEffectiveFromEmail(),
                     "to", List.of(request.getRecipientEmail()),
                     "subject", subject,
                     "html", body
@@ -188,7 +201,7 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         try {
             Map<String, Object> payload = Map.of(
                     "personalizations", List.of(Map.of("to", List.of(Map.of("email", request.getRecipientEmail())))),
-                    "from", Map.of("email", fromEmail),
+                    "from", Map.of("email", getEffectiveFromEmail()),
                     "subject", subject,
                     "content", List.of(Map.of("type", "text/html", "value", body))
             );
@@ -232,7 +245,7 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         log.info("Dispatching reminder email via HTTPS Brevo API to recipient {}", maskedEmail);
         try {
             Map<String, Object> payload = Map.of(
-                    "sender", Map.of("email", fromEmail),
+                    "sender", Map.of("email", getEffectiveFromEmail()),
                     "to", List.of(Map.of("email", request.getRecipientEmail(), "name", request.getCustomerName())),
                     "subject", subject,
                     "htmlContent", body
@@ -327,7 +340,7 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromEmail);
+            helper.setFrom(getEffectiveFromEmail());
             helper.setTo(request.getRecipientEmail());
             helper.setSubject(subject);
             helper.setText(body, true);

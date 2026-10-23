@@ -183,6 +183,12 @@ public class AdminController {
             return userRepository.save(u);
         });
 
+        if (customerPhone != null && !customerPhone.isBlank() &&
+                (customer.getPhoneNumber() == null || customer.getPhoneNumber().isBlank())) {
+            customer.setPhoneNumber(customerPhone.trim());
+            customer = userRepository.save(customer);
+        }
+
         com.loanproject.loan_app.bean.Loan loan = new com.loanproject.loan_app.bean.Loan();
         loan.setUser(customer);
         loan.setAmount(emiAmount.doubleValue() * 12);
