@@ -118,8 +118,11 @@ public class LoanController {
                     .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
                     .toList();
 
+            java.util.Map<Long, java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment>> preloadedInstallments =
+                    preloadInstallmentsByLoanId(rawBranchLoans);
+
             List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = rawBranchLoans.stream()
-                    .map(this::mapToStaffLoanDto)
+                    .map(l -> mapToStaffLoanDto(l, preloadedInstallments))
                     .toList();
 
             // Portfolio Aggregates
@@ -574,7 +577,25 @@ public class LoanController {
         return "redirect:/dashboard?collectionRecorded=true";
     }
 
+    private java.util.Map<Long, java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment>> preloadInstallmentsByLoanId(List<Loan> loans) {
+        if (installmentRepository == null || loans == null || loans.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        try {
+            return installmentRepository.findAll().stream()
+                    .filter(r -> r.getLoan() != null && r.getLoan().getLoanId() != null)
+                    .collect(java.util.stream.Collectors.groupingBy(r -> r.getLoan().getLoanId()));
+        } catch (Exception e) {
+            return java.util.Collections.emptyMap();
+        }
+    }
+
     private com.loanproject.loan_app.dto.StaffDashboardLoanDto mapToStaffLoanDto(Loan l) {
+        return mapToStaffLoanDto(l, null);
+    }
+
+    private com.loanproject.loan_app.dto.StaffDashboardLoanDto mapToStaffLoanDto(
+            Loan l, java.util.Map<Long, java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment>> preloadedInstallments) {
         String borrowerName = l.getUser() != null ? l.getUser().getName() : "Unknown";
         String rawEmail = l.getUser() != null ? l.getUser().getEmail() : "";
         String maskedEmail = com.loanproject.loan_app.security.DataMaskingUtils.maskEmail(rawEmail);
@@ -603,8 +624,12 @@ public class LoanController {
                 repaymentStatus = "CLOSED";
             } else if (installmentRepository != null) {
                 java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
-                java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment> installments =
-                        installmentRepository.findByLoan_LoanIdOrderByInstallmentNumberAsc(l.getLoanId());
+                java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment> installments;
+                if (preloadedInstallments != null) {
+                    installments = preloadedInstallments.getOrDefault(l.getLoanId(), java.util.Collections.emptyList());
+                } else {
+                    installments = installmentRepository.findByLoan_LoanIdOrderByInstallmentNumberAsc(l.getLoanId());
+                }
                 int maxDpd = 0;
                 double totalOverdue = 0.0;
                 for (com.loanproject.loan_app.bean.RepaymentInstallment inst : installments) {
@@ -764,8 +789,11 @@ public class LoanController {
                 .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
                 .toList();
 
+        java.util.Map<Long, java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment>> preloadedInstallments =
+                preloadInstallmentsByLoanId(rawBranchLoans);
+
         List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = rawBranchLoans.stream()
-                .map(this::mapToStaffLoanDto)
+                .map(l -> mapToStaffLoanDto(l, preloadedInstallments))
                 .toList();
 
         List<String> allBranches = staffLoans.stream()
@@ -885,8 +913,11 @@ public class LoanController {
                 .filter(l -> "ALL".equals(branchFilter) || branchFilter.equalsIgnoreCase(l.getBranch()))
                 .toList();
 
+        java.util.Map<Long, java.util.List<com.loanproject.loan_app.bean.RepaymentInstallment>> preloadedInstallments =
+                preloadInstallmentsByLoanId(rawBranchLoans);
+
         List<com.loanproject.loan_app.dto.StaffDashboardLoanDto> staffLoans = rawBranchLoans.stream()
-                .map(this::mapToStaffLoanDto)
+                .map(l -> mapToStaffLoanDto(l, preloadedInstallments))
                 .toList();
 
         List<com.loanproject.loan_app.dto.ActiveBorrowerDto> activeBorrowers = buildActiveBorrowers(rawBranchLoans, u);
