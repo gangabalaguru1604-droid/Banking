@@ -36,10 +36,19 @@ public class UserService {
         this.encryptionService = encryptionService;
     }
 
+    // Password strength regex: min 8 characters, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
+    private static final java.util.regex.Pattern PASSWORD_POLICY =
+            java.util.regex.Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#^()_+\\-={}\\[\\]|:;\"'<>,.~`]).{8,64}$");
+
     @Transactional
     public void register(User u) {
         if (repo.existsByEmail(u.getEmail())) {
             throw new IllegalArgumentException("Email already registered");
+        }
+
+        if (u.getPassword() == null || !PASSWORD_POLICY.matcher(u.getPassword()).matches()) {
+            throw new IllegalArgumentException(
+                    "Password must be 8-64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.");
         }
 
         // Public registration ONLY provisions customer accounts. Never staff or admin!

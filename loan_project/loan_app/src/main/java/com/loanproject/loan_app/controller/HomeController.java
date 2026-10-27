@@ -90,6 +90,7 @@ public class HomeController {
                         @RequestParam(value = "logout", required = false) String logout,
                         @RequestParam(value = "expired", required = false) String expired,
                         @RequestParam(value = "resetSuccess", required = false) String resetSuccess,
+                        @RequestParam(value = "resetRequested", required = false) String resetRequested,
                         @RequestParam(value = "mfaDeliveryError", required = false) String mfaDeliveryError,
                         ModelMap model) {
         if (mfaDeliveryError != null) {
@@ -105,6 +106,9 @@ public class HomeController {
         }
         if (resetSuccess != null) {
             model.addAttribute("resetSuccessMessage", "Password has been reset successfully. Please log in with your new password.");
+        }
+        if (resetRequested != null) {
+            model.addAttribute("resetRequestedMessage", "If an account exists for that email, password reset instructions have been sent. Please check your inbox.");
         }
         return "login";
     }
@@ -449,9 +453,8 @@ public class HomeController {
     public String handleForgotPassword(@RequestParam("email") String email,
                                        HttpServletRequest request,
                                        ModelMap model) {
-        String message = passwordResetService.requestReset(email, request);
-        model.addAttribute("infoMessage", message);
-        return "forgot-password";
+        passwordResetService.requestReset(email, request);
+        return "redirect:/login?resetRequested=true";
     }
 
     @GetMapping("/reset-password")

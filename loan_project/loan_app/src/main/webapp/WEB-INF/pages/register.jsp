@@ -21,7 +21,17 @@
         <input type="email" name="email" placeholder="customer@example.com" required>
 
         <label style="font-weight:600; font-size:13px; color:#4a5568;">Password</label>
-        <input type="password" name="password" placeholder="Choose a password" required>
+        <input type="password" name="password" id="password" placeholder="Choose a strong password" required autocomplete="new-password">
+
+        <div style="background:#f7fafc; border-left:3px solid #e67e22; padding:10px 12px; margin-bottom:15px; font-size:12px; color:#4a5568; border-radius: 4px;">
+            <strong>Password Requirements:</strong>
+            <ul style="margin:5px 0 0 15px; padding:0; line-height: 1.6;">
+                <li>8 to 64 characters long</li>
+                <li>At least one uppercase and one lowercase letter</li>
+                <li>At least one number (0-9)</li>
+                <li>At least one special character (@$!%*?&#^()_+-=...)</li>
+            </ul>
+        </div>
 
         <button type="submit" class="btn" style="margin-top:10px;">Create Customer Account</button>
     </form>

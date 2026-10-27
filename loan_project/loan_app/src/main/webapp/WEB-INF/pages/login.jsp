@@ -2,9 +2,7 @@
 
 <div class="card">
     <h2 style="text-align: center; margin-top: 0; color: #2c3e50;">Staff & Customer Login</h2>
-    <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-        Stage 1: Enter your Bank User ID / Email and Password
-    </p>
+    
 
     <!-- Error Messages (Generic to prevent account enumeration / state disclosure) -->
     <c:if test="${not empty errorMessage}">
@@ -21,6 +19,12 @@
 
     <c:if test="${not empty resetSuccessMessage}">
         <div class="alert alert-success">${resetSuccessMessage}</div>
+    </c:if>
+
+    <c:if test="${not empty resetRequestedMessage}">
+        <div class="alert alert-info" style="background-color: #ebf8ff; border-left: 4px solid #3182ce; color: #2b6cb0; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px; font-size: 13px;">
+            ${resetRequestedMessage}
+        </div>
     </c:if>
 
     <form action="/login" method="post">

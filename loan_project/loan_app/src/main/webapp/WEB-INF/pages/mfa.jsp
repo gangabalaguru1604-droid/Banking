@@ -6,17 +6,17 @@
     <c:choose>
         <c:when test="${mfaType eq 'DYNAMIC_EMAIL'}">
             <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-                Stage 2: Enter the 6-digit verification code sent to your registered email <strong>${maskedEmail}</strong>
+               Enter the 6-digit verification code sent to your registered email <strong>${maskedEmail}</strong>
             </p>
         </c:when>
         <c:when test="${isCustomer}">
             <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-                Stage 2: Enter the 6-digit code from your <strong>Authenticator App</strong> (Google Authenticator, Microsoft Authenticator, etc.)
+                 Enter the 6-digit code from your <strong>Authenticator App</strong> (Google Authenticator, Microsoft Authenticator, etc.)
             </p>
         </c:when>
         <c:otherwise>
             <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-                Stage 2: Enter your 6-digit authentication code (or staff test code)
+                 Enter your 6-digit authentication code (or staff test code)
             </p>
         </c:otherwise>
     </c:choose>
@@ -34,7 +34,7 @@
     </c:if>
 
     <div style="background: #edf2f7; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; text-align: center; color: #4a5568;">
-        ⏳ Challenge expires in: <span id="mfaCountdown" style="font-weight: 700; color: #e53e3e;">05:00</span>
+        Challenge expires in: <span id="mfaCountdown" style="font-weight: 700; color: #e53e3e;">05:00</span>
     </div>
 
     <c:if test="${not empty simulatedOtpCode}">
