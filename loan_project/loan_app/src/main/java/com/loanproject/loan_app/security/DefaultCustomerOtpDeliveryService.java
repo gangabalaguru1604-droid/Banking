@@ -24,6 +24,9 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
+    @Autowired(required = false)
+    private com.loanproject.loan_app.services.GmailRestService gmailRestService;
+
     @Value("${mfa.customer.mail.from:${reminder.mail.from:security@bankofindia.co.in}}")
     private String fromEmail;
 
@@ -42,9 +45,10 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
     private final Map<String, String> lastDeliveredOtpByEmail = new ConcurrentHashMap<>();
 
     public boolean hasValidMailCredentials() {
-        return mailSender != null
+        return (mailSender != null
                 && mailUsername != null && !mailUsername.isBlank()
-                && mailPassword != null && !mailPassword.isBlank();
+                && mailPassword != null && !mailPassword.isBlank())
+                || (gmailRestService != null && gmailRestService.isConfigured());
     }
 
     @Override
@@ -75,38 +79,48 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
         // Record in test-hook storage
         lastDeliveredOtpByEmail.put(recipientEmail, otpCode);
 
-        // Deliver via real JavaMailSender ONLY if SMTP credentials are fully provided and not simulated
+        // Deliver via real Gmail REST API or JavaMailSender ONLY if credentials are fully provided and not simulated
         if (hasValidMailCredentials() && !simulateMail) {
-            try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-                String from = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail : "security@bankofindia.co.in";
-                helper.setFrom(from);
-                helper.setTo(recipientEmail);
-                helper.setSubject("Bank of India - Authentication Verification Code");
+            String htmlContent = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
+                    + "<h2 style='color: #1a365d; margin-top: 0;'>Bank of India Loan Portal</h2>"
+                    + "<p>Dear " + (customer.getName() != null ? customer.getName() : "Customer") + ",</p>"
+                    + "<p>Your one-time dynamic verification code for signing in is:</p>"
+                    + "<div style='font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2b6cb0; background: #edf2f7; padding: 12px 24px; text-align: center; border-radius: 6px; margin: 20px 0;'>"
+                    + otpCode
+                    + "</div>"
+                    + "<p style='color: #718096; font-size: 13px;'>This code is valid for 5 minutes and can only be used once. Never share this code with anyone, including bank staff.</p>"
+                    + "<p style='color: #718096; font-size: 13px;'>If you did not request this login attempt, please secure your account immediately.</p>"
+                    + "<hr style='border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
+                    + "<p style='color: #a0aec0; font-size: 11px; text-align: center;'>Bank of India Loan Management System</p>"
+                    + "</div>";
 
-                String htmlContent = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                        + "<h2 style='color: #1a365d; margin-top: 0;'>Bank of India Loan Portal</h2>"
-                        + "<p>Dear " + (customer.getName() != null ? customer.getName() : "Customer") + ",</p>"
-                        + "<p>Your one-time dynamic verification code for signing in is:</p>"
-                        + "<div style='font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2b6cb0; background: #edf2f7; padding: 12px 24px; text-align: center; border-radius: 6px; margin: 20px 0;'>"
-                        + otpCode
-                        + "</div>"
-                        + "<p style='color: #718096; font-size: 13px;'>This code is valid for 5 minutes and can only be used once. Never share this code with anyone, including bank staff.</p>"
-                        + "<p style='color: #718096; font-size: 13px;'>If you did not request this login attempt, please secure your account immediately.</p>"
-                        + "<hr style='border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
-                        + "<p style='color: #a0aec0; font-size: 11px; text-align: center;'>Bank of India Loan Management System</p>"
-                        + "</div>";
+            // Prioritize Gmail API over HTTPS (super fast, immune to cloud SMTP port blocking)
+            if (gmailRestService != null && gmailRestService.isConfigured()) {
+                String messageId = gmailRestService.sendEmail(recipientEmail, "Bank of India - Authentication Verification Code", htmlContent);
+                if (messageId != null) {
+                    log.info("Dispatched dynamic MFA OTP via Gmail API over HTTPS to recipient {}", maskedEmail);
+                    return true;
+                }
+                log.warn("Failed to deliver OTP via Gmail API to recipient {}, attempting SMTP fallback", maskedEmail);
+            }
 
-                helper.setText(htmlContent, true);
-                mailSender.send(message);
+            if (mailSender != null && mailUsername != null && !mailUsername.isBlank()) {
+                try {
+                    MimeMessage message = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                    String from = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail : "security@bankofindia.co.in";
+                    helper.setFrom(from);
+                    helper.setTo(recipientEmail);
+                    helper.setSubject("Bank of India - Authentication Verification Code");
+                    helper.setText(htmlContent, true);
+                    mailSender.send(message);
 
-                // Note: never log the OTP code itself!
-                log.info("Dispatched dynamic MFA OTP via SMTP email channel to recipient {}", maskedEmail);
-                return true;
-            } catch (Exception e) {
-                log.error("Failed to deliver dynamic OTP email to recipient {}: {}", maskedEmail, e.getMessage());
-                return false;
+                    log.info("Dispatched dynamic MFA OTP via SMTP email channel to recipient {}", maskedEmail);
+                    return true;
+                } catch (Exception e) {
+                    log.error("Failed to deliver dynamic OTP email via SMTP to recipient {}: {}", maskedEmail, e.getMessage());
+                    return false;
+                }
             }
         }
 

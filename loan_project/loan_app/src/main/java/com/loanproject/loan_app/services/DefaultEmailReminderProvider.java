@@ -39,6 +39,9 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
     private JavaMailSender mailSender;
 
     @Autowired(required = false)
+    private GmailRestService gmailRestService;
+
+    @Autowired(required = false)
     private ObjectMapper objectMapper;
 
     @Value("${reminder.email.provider:AUTO}")
@@ -129,6 +132,8 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
                 return ReminderSendResult.failure("BREVO is selected, but BREVO_API_KEY is missing.", false);
             }
             return sendViaBrevo(request, subject, body, maskedEmail);
+        } else if ("GMAIL_API".equalsIgnoreCase(providerMode) || "GMAIL".equalsIgnoreCase(providerMode)) {
+            return sendViaGmailApi(request, subject, body, maskedEmail);
         } else if ("HTTP_REST".equalsIgnoreCase(providerMode)) {
             if (emailApiUrl == null || emailApiUrl.isBlank()) {
                 return ReminderSendResult.failure("HTTP_REST is selected, but EMAIL_API_URL is missing.", false);
@@ -137,6 +142,9 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         }
 
         // AUTO mode: use whichever provider is configured. Do not report a fake success.
+        if (gmailRestService != null && gmailRestService.isConfigured()) {
+            return sendViaGmailApi(request, subject, body, maskedEmail);
+        }
         if (mailSender != null && mailUsername != null && !mailUsername.isBlank()) {
             return sendViaSmtp(request, subject, body, maskedEmail);
         }
@@ -154,6 +162,9 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
         if (resendApiKey != null && !resendApiKey.isBlank()) {
             return "RESEND";
         }
+        if (gmailRestService != null && gmailRestService.isConfigured()) {
+            return "GMAIL_API";
+        }
         if (sendgridApiKey != null && !sendgridApiKey.isBlank()) {
             return "SENDGRID";
         }
@@ -167,6 +178,20 @@ public class DefaultEmailReminderProvider implements EmailReminderProvider {
             return "SMTP";
         }
         return "SIMULATED";
+    }
+
+    private ReminderSendResult sendViaGmailApi(ReminderMessageRequest request, String subject, String body, String maskedEmail) {
+        log.info("Dispatching reminder email via HTTPS Gmail REST API to recipient {}", maskedEmail);
+        if (gmailRestService == null || !gmailRestService.isConfigured()) {
+            return ReminderSendResult.failure("Gmail API is selected, but GMAIL_* credentials are not fully configured.", false);
+        }
+        String messageId = gmailRestService.sendEmail(request.getRecipientEmail(), subject, body);
+        if (messageId != null) {
+            log.info("Email successfully accepted by Gmail API for recipient {} with ID {}", maskedEmail, messageId);
+            return ReminderSendResult.success(messageId);
+        } else {
+            return ReminderSendResult.failure("Failed to send email via Gmail REST API", true);
+        }
     }
 
     private ReminderSendResult sendViaResend(ReminderMessageRequest request, String subject, String body, String maskedEmail) {
