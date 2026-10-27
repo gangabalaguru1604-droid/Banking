@@ -124,11 +124,12 @@ public class TwoFactorAuthenticationSuccessHandler implements AuthenticationSucc
             }
 
             if (!secretDecryptable) {
-                // Inconsistency: mfaEnrolled=true but secret cannot be decrypted under current cryptographic key
-                log.error("DIAGNOSTIC: User {} -> mfaEnrolled=true, hasSecret=true, secretDecryptable=false, selectedFlow=INCONSISTENT_STATE, destination=/login?error=true", user.getEmail());
-                auditService.record(user.getEmail(), request, "MFA_STATE_INCONSISTENCY", "FAILURE", "CORRUPT_SECRET",
-                        "Stored MFA secret cannot be decrypted under current cryptographic key");
-                response.sendRedirect("/login?error=true");
+                // If the secret was encrypted with an older key or corrupted, self-heal by redirecting to enrollment
+                log.warn("User {} stored MFA secret cannot be decrypted under current key. Self-healing by redirecting to re-enrollment.", user.getEmail());
+                user.setMfaEnrolled(false);
+                user.setMfaSecret(null);
+                userRepository.save(user);
+                redirectToEnrollment(user, request, response, newSession);
                 return;
             }
 
