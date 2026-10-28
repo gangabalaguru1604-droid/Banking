@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bank of India - Loan Approval Workflow (JSF)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F7F9FC;
+            color: #172B4D;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 36px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .logo a {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0050A4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-orange { color: #E31B23; }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: #172B4D;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .nav-links a:hover { color: #ED7D16; }
+
+        .user-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            color: #1E40AF;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            margin: 28px auto;
+            padding: 0 12px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #172B4D;
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: #6B7280;
+            margin: 0;
+        }
+
+        .jsf-tag {
+            background: #FEF3C7;
+            border: 1px solid #FCD34D;
+            color: #92400E;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .alert {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background-color: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+
+        .alert-error {
+            background-color: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .search-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #CBD5E1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #FFFFFF;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #ED7D16;
+            box-shadow: 0 0 0 3px rgba(237,125,22,0.15);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary { background: #ED7D16; color: #FFFFFF; }
+        .btn-primary:hover { background: #D96C0C; }
+
+        .btn-secondary { background: #4B5563; color: #FFFFFF; }
+        .btn-secondary:hover { background: #374151; }
+
+        .btn-success { background: #10B981; color: #FFFFFF; }
+        .btn-success:hover { background: #059669; }
+
+        .btn-danger { background: #EF4444; color: #FFFFFF; }
+        .btn-danger:hover { background: #DC2626; }
+
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 4px; }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            background: #FFFFFF;
+        }
+
+        table.loan-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        table.loan-table th {
+            background-color: #F8FAFC;
+            color: #475569;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            border-bottom: 2px solid #E2E8F0;
+            text-align: left;
+        }
+
+        table.loan-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #F1F5F9;
+            vertical-align: middle;
+            color: #1E293B;
+        }
+
+        table.loan-table tr:hover { background-color: #F8FAFC; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-warning { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+        .badge-success { background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
+        .badge-danger  { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
+        .badge-branch  { background: #E0E7FF; color: #3730A3; border: 1px solid #C7D2FE; }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 16px;
+        }
+
+        .section-box {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .section-heading {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0050A4;
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #CBD5E1;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #E2E8F0;
+            font-size: 13px;
+        }
+
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #64748B; font-weight: 600; }
+        .info-value { color: #0F172A; font-weight: 700; text-align: right; }
+
+        .decision-box {
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .decision-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #92400E;
+            margin: 0 0 12px 0;
+        }
+
+        .actions-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: #64748B;
+        }
+
+        .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+
+        @media (max-width: 900px) {
+            .details-grid { grid-template-columns: 1fr; }
+            .search-grid { grid-template-columns: 1fr; }
+            .navbar { padding: 12px 18px; flex-direction: column; gap: 12px; }
+        }
+    </style>
+</h:head>
+<h:body>
+
+    <!-- Top Navigation Bar -->
+    <div class="navbar">
+        <div class="logo">
+            <a href="/dashboard">
+                <img src="/images/bank-logo.jpg" alt="Bank of India" height="36" style="border-radius:4px;"/>
+                Bank of <span class="brand-orange">India</span>
+                <span class="jsf-tag">JSF Workflow</span>
+            </a>
+        </div>
+        <div class="nav-links">
+            <span class="user-badge">
+                👤 #{loanApprovalBean.currentOfficerName} (#{loanApprovalBean.currentOfficerRole}) | Branch: #{loanApprovalBean.currentOfficerBranch}
+            </span>
+            <a href="/dashboard">← Back to Main Dashboard</a>
+            <a href="/loan-search">Loan Search</a>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">
+                    Loan Approval &amp; Decision Workflow
+                    <span class="badge badge-branch">Branch: #{loanApprovalBean.currentOfficerBranch}</span>
+                </h1>
+                <p class="page-subtitle">
+                    Review pending applications, inspect borrower financial eligibility, and execute authoritative approval or rejection decisions.
+                </p>
+            </div>
+            <div>
+                <a href="/dashboard" class="btn btn-secondary btn-sm">Return to JSP Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Notification Alerts -->
+        <h:panelGroup rendered="#{not empty loanApprovalBean.successMessage}">
+            <div class="alert alert-success">
+                <span>✅ #{loanApprovalBean.successMessage}</span>
+            </div>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{not empty loanApprovalBean.errorMessage}">
+            <div class="alert alert-error">
+                <span>⚠️ #{loanApprovalBean.errorMessage}</span>
+            </div>
+        </h:panelGroup>
+
+        <!-- Search and Filter Form -->
+        <div class="card">
+            <h:form id="searchForm">
+                <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+                <div class="search-grid">
+                    <div>
+                        <h:inputText value="#{loanApprovalBean.searchQuery}"
+                                     id="searchQueryInput"
+                                     styleClass="form-control"
+                                     placeholder="Search by Loan ID, Account No, Borrower Name, or Customer ID..."/>
+                    </div>
+                    <div>
+                        <h:selectOneMenu value="#{loanApprovalBean.statusFilter}" styleClass="form-control" id="statusFilterSelect">
+                            <f:selectItem itemValue="ALL" itemLabel="All Pending Statuses"/>
+                            <f:selectItem itemValue="PENDING" itemLabel="PENDING"/>
+                            <f:selectItem itemValue="SUBMITTED" itemLabel="SUBMITTED"/>
+                            <f:selectItem itemValue="IN_REVIEW" itemLabel="IN_REVIEW"/>
+                            <f:selectItem itemValue="APPLIED" itemLabel="APPLIED"/>
+                        </h:selectOneMenu>
+                    </div>
+                    <div>
+                        <h:commandButton value="🔍 Filter Applications" action="#{loanApprovalBean.search}" styleClass="btn btn-primary" id="searchBtn">
+                            <f:ajax execute="@form" render=":applicationsForm :detailsPanel :searchForm"/>
+                        </h:commandButton>
+                    </div>
+                    <div>
+                        <h:commandButton value="Reset" action="#{loanApprovalBean.resetSearch}" styleClass="btn btn-secondary" id="resetBtn">
+                            <f:ajax execute="@form" render=":applicationsForm :detailsPanel :searchForm"/>
+                        </h:commandButton>
+                    </div>
+                </div>
+            </h:form>
+        </div>
+
+        <!-- Application Review & Decision Panel (Shown when an application is selected) -->
+        <h:panelGroup id="detailsPanel">
+            <h:panelGroup rendered="#{loanApprovalBean.selectedLoan != null}">
+                <div class="card" style="border: 2px solid #ED7D16;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h2 style="margin:0; color:#0050A4; font-size:22px; font-weight:800;">
+                            📋 Detailed Application Review: Application ##{loanApprovalBean.selectedLoan.loanId}
+                        </h2>
+                        <h:form id="closeForm" style="margin:0; display:inline;">
+                            <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+                            <h:commandButton value="✕ Close Review" action="#{loanApprovalBean.closeDetails}" styleClass="btn btn-secondary btn-sm" id="closeReviewBtn">
+                                <f:ajax execute="@form" render=":detailsPanel :applicationsForm"/>
+                            </h:commandButton>
+                        </h:form>
+                    </div>
+
+                    <div class="details-grid">
+                        <!-- Borrower Profile Information -->
+                        <div class="section-box">
+                            <h3 class="section-heading">👤 Borrower Information</h3>
+                            <div class="info-row">
+                                <span class="info-label">Customer Name:</span>
+                                <span class="info-value">#{loanApprovalBean.selectedLoan.user.name}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Customer ID (Masked):</span>
+                                <span class="info-value">#{loanApprovalBean.maskCustomerId(loanApprovalBean.selectedLoan.user.customerId)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Registered Email:</span>
+                                <span class="info-value">#{loanApprovalBean.maskEmail(loanApprovalBean.selectedLoan.user.email)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Phone Number:</span>
+                                <span class="info-value">#{loanApprovalBean.maskPhone(loanApprovalBean.selectedLoan.user.phoneNumber)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">PAN Number:</span>
+                                <span class="info-value">#{loanApprovalBean.maskPan(loanApprovalBean.selectedLoan.user.panNumber)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Aadhaar (Last 4):</span>
+                                <span class="info-value">#{loanApprovalBean.maskAadhaar(loanApprovalBean.selectedLoan.user.aadhaarNumber)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">KYC Status:</span>
+                                <span class="info-value"><span class="badge badge-success">#{loanApprovalBean.selectedLoan.user.kycStatus}</span></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Home Branch:</span>
+                                <span class="info-value"><span class="badge badge-branch">#{loanApprovalBean.selectedLoan.user.branch}</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Loan Terms and Financials -->
+                        <div class="section-box">
+                            <h3 class="section-heading">💰 Requested Loan Terms</h3>
+                            <div class="info-row">
+                                <span class="info-label">Application Number:</span>
+                                <span class="info-value">##{loanApprovalBean.selectedLoan.loanId}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Account Number:</span>
+                                <span class="info-value">#{loanApprovalBean.selectedLoan.accountNumber != null ? loanApprovalBean.selectedLoan.accountNumber : 'Assigned Upon Approval'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Product Type:</span>
+                                <span class="info-value">#{loanApprovalBean.selectedLoan.productType}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Principal Amount:</span>
+                                <span class="info-value" style="color:#0050A4; font-size:16px;">#{loanApprovalBean.formatCurrency(loanApprovalBean.selectedLoan.amount)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Annual Interest Rate:</span>
+                                <span class="info-value">#{loanApprovalBean.selectedLoan.interest}% p.a. (Fixed)</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Repayment Tenure:</span>
+                                <span class="info-value">#{loanApprovalBean.selectedLoan.months} Months</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Calculated Monthly EMI:</span>
+                                <span class="info-value" style="color:#E31B23; font-size:16px;">#{loanApprovalBean.formatCurrency(loanApprovalBean.selectedLoan.emi)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Current Application Status:</span>
+                                <span class="info-value"><span class="badge badge-warning">#{loanApprovalBean.selectedLoan.status}</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authoritative Decision Processing Form -->
+                    <div class="decision-box">
+                        <h4 class="decision-title">⚡ Official Reviewer Decision</h4>
+                        <p style="font-size:13px; color:#78350F; margin:0 0 16px 0;">
+                            Approving this loan will activate the account, disburse principal of <strong>#{loanApprovalBean.formatCurrency(loanApprovalBean.selectedLoan.amount)}</strong>, and initialize the amortization schedule. Rejecting requires a mandatory, audited justification reason.
+                        </p>
+
+                        <h:form id="decisionForm">
+                            <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                                <div>
+                                    <label style="display:block; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px;">
+                                        Approval Comments (Optional):
+                                    </label>
+                                    <h:inputText value="#{loanApprovalBean.approvalComments}"
+                                                 id="approvalCommentsInput"
+                                                 styleClass="form-control"
+                                                 placeholder="E.g., Credit score verified, income proof valid..."/>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:13px; font-weight:700; color:#DC2626; margin-bottom:6px;">
+                                        Rejection Reason (Mandatory if Rejecting): *
+                                    </label>
+                                    <h:inputTextarea value="#{loanApprovalBean.rejectionReason}"
+                                                     id="rejectionReasonInput"
+                                                     rows="2"
+                                                     styleClass="form-control"
+                                                     placeholder="Provide specific reason (3-500 characters)..."/>
+                                </div>
+                            </div>
+
+                            <div class="actions-row">
+                                <h:commandButton value="✔ Approve &amp; Activate Loan"
+                                                 id="approveBtn"
+                                                 action="#{loanApprovalBean.approve}"
+                                                 onclick="return confirm('Are you sure you want to APPROVE this loan application and generate the amortization schedule?');"
+                                                 styleClass="btn btn-success">
+                                    <f:ajax execute="@form" render=":detailsPanel :applicationsForm"/>
+                                </h:commandButton>
+
+                                <h:commandButton value="✖ Reject Application"
+                                                 id="rejectBtn"
+                                                 action="#{loanApprovalBean.reject}"
+                                                 onclick="return confirm('Are you sure you want to REJECT this loan application with the specified reason?');"
+                                                 styleClass="btn btn-danger">
+                                    <f:ajax execute="@form" render=":detailsPanel :applicationsForm"/>
+                                </h:commandButton>
+
+                                <h:commandButton value="Cancel / Close Review"
+                                                 action="#{loanApprovalBean.closeDetails}"
+                                                 styleClass="btn btn-secondary">
+                                    <f:ajax execute="@form" render=":detailsPanel :applicationsForm"/>
+                                </h:commandButton>
+                            </div>
+                        </h:form>
+                    </div>
+
+                </div>
+            </h:panelGroup>
+        </h:panelGroup>
+
+        <!-- Pending Applications Table -->
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="margin:0; font-size:18px; font-weight:800; color:#172B4D;">
+                    Pending Applications Awaiting Review (#{loanApprovalBean.pendingLoansCount})
+                </h3>
+            </div>
+
+            <h:form id="applicationsForm">
+                <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+
+                <h:panelGroup rendered="#{empty loanApprovalBean.pendingLoans}">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎉</div>
+                        <h4 style="margin:0 0 8px 0; color:#172B4D; font-size:18px;">All Caught Up!</h4>
+                        <p style="margin:0; font-size:14px;">No pending loan applications matching your criteria in branch #{loanApprovalBean.currentOfficerBranch}.</p>
+                    </div>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{not empty loanApprovalBean.pendingLoans}">
+                    <div class="table-responsive">
+                        <table class="loan-table" id="pendingLoansTable">
+                            <thead>
+                                <tr>
+                                    <th>Loan ID</th>
+                                    <th>Account No</th>
+                                    <th>Borrower Name</th>
+                                    <th>Customer ID</th>
+                                    <th>Branch</th>
+                                    <th>Amount</th>
+                                    <th>Interest</th>
+                                    <th>Tenure</th>
+                                    <th>Monthly EMI</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{loanApprovalBean.pendingLoans}" var="loan">
+                                    <tr>
+                                        <td><strong>##{loan.loanId}</strong></td>
+                                        <td>
+                                            <code>#{loan.accountNumber != null ? loanApprovalBean.maskAccountNumber(loan.accountNumber) : 'PENDING'}</code>
+                                        </td>
+                                        <td><strong>#{loan.user.name}</strong></td>
+                                        <td>#{loanApprovalBean.maskCustomerId(loan.user.customerId)}</td>
+                                        <td><span class="badge badge-branch">#{loan.branch}</span></td>
+                                        <td style="font-weight:700; color:#0050A4;">#{loanApprovalBean.formatCurrency(loan.amount)}</td>
+                                        <td>#{loan.interest}%</td>
+                                        <td>#{loan.months} mos</td>
+                                        <td style="font-weight:700; color:#E31B23;">#{loanApprovalBean.formatCurrency(loan.emi)}</td>
+                                        <td><span class="badge badge-warning">#{loan.status}</span></td>
+                                        <td>
+                                            <h:commandButton value="Review Details →"
+                                                             action="#{loanApprovalBean.selectApplication(loan.loanId)}"
+                                                             styleClass="btn btn-primary btn-sm"
+                                                             id="reviewBtn_#{loan.loanId}">
+                                                <f:ajax execute="@form" render=":detailsPanel :applicationsForm"/>
+                                            </h:commandButton>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </tbody>
+                        </table>
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </div>
+
+    </div>
+
+</h:body>
+</html>

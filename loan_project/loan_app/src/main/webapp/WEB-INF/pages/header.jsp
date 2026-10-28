@@ -379,6 +379,10 @@
                     <a href="/loan-search">Loan Search</a>
                 </c:if>
 
+                <c:if test="${userObj.role == 'ROLE_LOAN_OFFICER' || userObj.role == 'ROLE_ADMIN'}">
+                    <a href="/loan-approval.xhtml" style="font-weight:700; color:#ED7D16;">Loan Approvals (JSF)</a>
+                </c:if>
+
                 <c:if test="${userObj.role == 'ROLE_ADMIN'}">
                     <a href="/admin/staff">Staff Management</a>
                     <a href="/admin/audit-logs">Audit Trail</a>
@@ -388,6 +392,8 @@
                 <c:if test="${userObj.role == 'ROLE_CUSTOMER'}">
                     <a href="/applyLoan">Apply Loan</a>
                 </c:if>
+
+                <a href="/settings-hub.xhtml" style="font-weight:700; color:#0050A4;">⚙️ Settings</a>
 
                 <form class="logout-form" action="/logout" method="post">
                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>

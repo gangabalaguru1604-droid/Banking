@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bank of India - Notification Settings</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F7F9FC;
+            color: #172B4D;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 36px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .logo a {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0050A4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-orange { color: #E31B23; }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .nav-links a {
+            color: #172B4D;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-links a:hover { color: #ED7D16; }
+        .container {
+            max-width: 1100px;
+            margin: 24px auto 40px auto;
+            padding: 0 20px;
+        }
+        .settings-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: #FFFFFF;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid #E2E8F0;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .settings-nav a {
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+        .settings-nav a:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .settings-nav a.active {
+            background: #0050A4;
+            color: #FFFFFF;
+        }
+        .page-header {
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            color: #0050A4;
+            font-size: 26px;
+            margin: 0 0 6px 0;
+            font-weight: 800;
+        }
+        .page-header p {
+            color: #64748B;
+            font-size: 14px;
+            margin: 0;
+        }
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0F172A;
+            margin: 0 0 16px 0;
+            border-bottom: 1px solid #F1F5F9;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .preference-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+        .preference-row:last-child { border-bottom: none; }
+        .preference-info {
+            max-width: 80%;
+        }
+        .preference-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .preference-desc {
+            font-size: 12px;
+            color: #64748B;
+            margin-top: 3px;
+        }
+        .toggle-switch {
+            transform: scale(1.3);
+            cursor: pointer;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+        }
+        .btn-primary { background: #0050A4; color: #FFFFFF; }
+        .btn-primary:hover { background: #003D7D; }
+        .btn-outline { background: #FFFFFF; border: 1px solid #CBD5E1; color: #334155; }
+        .btn-outline:hover { background: #F8FAFC; border-color: #94A3B8; }
+        .alert {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-success { background: #ECFDF5; border-left: 4px solid #059669; color: #065F46; }
+        .alert-danger { background: #FEF2F2; border-left: 4px solid #DC2626; color: #991B1B; }
+        .alert-info { background: #EFF6FF; border-left: 4px solid #3B82F6; color: #1E40AF; }
+    </style>
+</h:head>
+<h:body>
+    <div class="navbar">
+        <div class="logo">
+            <a href="/dashboard">
+                <img src="/images/bank-logo.jpg" alt="Bank of India" height="34" style="border-radius:4px;"/>
+                Bank of <span class="brand-orange">India</span>
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="/settings-hub.xhtml" style="color:#0050A4; font-weight:700;">⚙️ Settings Hub</a>
+            <a href="/dashboard">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Settings Sub-Navigation -->
+        <div class="settings-nav">
+            <a href="/settings-hub.xhtml">⚙️ Hub</a>
+            <a href="/profile-settings.xhtml">👤 Profile Settings</a>
+            <a href="/security-settings.xhtml">🔒 Security Settings</a>
+            <a href="/notification-settings.xhtml" class="active">🔔 Notifications</a>
+            <a href="/loan-policy-settings.xhtml">🏛️ Loan Policy</a>
+            <a href="/role-permissions.xhtml">👥 Roles &amp; Permissions</a>
+            <a href="/audit-settings.xhtml">📋 Audit Logs</a>
+            <a href="/system-settings.xhtml">💻 System Status</a>
+        </div>
+
+        <div class="page-header">
+            <h1>Notification &amp; Alert Preferences</h1>
+            <p>Customize how and when you receive loan updates, repayment reminders, and security alerts.</p>
+        </div>
+
+        <!-- Feedback Alerts -->
+        <h:panelGroup rendered="#{not empty notificationSettingsBean.successMessage}">
+            <div class="alert alert-success">
+                <span>✅</span>
+                <strong>Saved:</strong> <h:outputText value="#{notificationSettingsBean.successMessage}"/>
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty notificationSettingsBean.errorMessage}">
+            <div class="alert alert-danger">
+                <span>⚠️</span>
+                <strong>Error:</strong> <h:outputText value="#{notificationSettingsBean.errorMessage}"/>
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty notificationSettingsBean.testNotificationStatus}">
+            <div class="alert alert-info">
+                <span>📩</span>
+                <h:outputText value="#{notificationSettingsBean.testNotificationStatus}"/>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="notificationForm">
+            <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+
+            <!-- Card 1: Communication Channels -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📡</span> Supported Delivery Channels
+                </div>
+
+                <div class="preference-row">
+                    <div class="preference-info">
+                        <div class="preference-label">
+                            <span>📧</span> Email Notifications
+                        </div>
+                        <div class="preference-desc">Receive detailed account statements, sanction letters, and payment confirmations via email.</div>
+                    </div>
+                    <div>
+                        <h:selectBooleanCheckbox value="#{notificationSettingsBean.emailEnabled}" class="toggle-switch"/>
+                    </div>
+                </div>
+
+                <div class="preference-row">
+                    <div class="preference-info">
+                        <div class="preference-label">
+                            <span>📱</span> SMS Mobile Notifications
+                        </div>
+                        <div class="preference-desc">Receive instant transactional SMS updates and urgent repayment alerts on your registered phone.</div>
+                    </div>
+                    <div>
+                        <h:selectBooleanCheckbox value="#{notificationSettingsBean.smsEnabled}" class="toggle-switch"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Notification Event Types -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📑</span> Event Categories
+                </div>
+
+                <div class="preference-row">
+                    <div class="preference-info">
+                        <div class="preference-label">Loan Application Updates</div>
+                        <div class="preference-desc">Instant alerts when your loan application is received, reviewed, approved, or rejected.</div>
+                    </div>
+                    <div>
+                        <h:selectBooleanCheckbox value="#{notificationSettingsBean.loanUpdatesEnabled}" class="toggle-switch"/>
+                    </div>
+                </div>
+
+                <div class="preference-row">
+                    <div class="preference-info">
+                        <div class="preference-label">Repayment &amp; Due Date Reminders</div>
+                        <div class="preference-desc">Advance reminders before EMI due dates and notifications when installment payments are recorded.</div>
+                    </div>
+                    <div>
+                        <h:selectBooleanCheckbox value="#{notificationSettingsBean.repaymentRemindersEnabled}" class="toggle-switch"/>
+                    </div>
+                </div>
+
+                <div class="preference-row">
+                    <div class="preference-info">
+                        <div class="preference-label">Security &amp; Account Access Alerts</div>
+                        <div class="preference-desc">Critical alerts for password changes, new device logins, and MFA verification attempts.</div>
+                    </div>
+                    <div>
+                        <h:selectBooleanCheckbox value="#{notificationSettingsBean.securityAlertsEnabled}" class="toggle-switch"/>
+                    </div>
+                </div>
+
+                <div style="margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <h:commandButton value="Save Preferences" action="#{notificationSettingsBean.savePreferences}" class="btn btn-primary"/>
+                    <h:commandButton value="Send Test Alert" action="#{notificationSettingsBean.sendTestNotification}" class="btn btn-outline"/>
+                </div>
+            </div>
+        </h:form>
+    </div>
+</h:body>
+</html>

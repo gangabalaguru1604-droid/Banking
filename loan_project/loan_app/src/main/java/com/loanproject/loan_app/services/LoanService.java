@@ -124,6 +124,49 @@ public class LoanService {
         return saved;
     }
 
+    @Transactional
+    public Loan applyPendingLoan(User user, double amount, double interest, int months) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Loan amount must be greater than zero");
+        }
+        if (interest <= 0 || interest > 100) {
+            throw new IllegalArgumentException("Annual interest rate must be between 0.1% and 100%");
+        }
+        if (months <= 0) {
+            throw new IllegalArgumentException("Tenure months must be greater than zero");
+        }
+
+        double r = interest / (12 * 100);
+        double emi = (amount * r * Math.pow(1 + r, months)) /
+                     (Math.pow(1 + r, months) - 1);
+
+        Loan l = new Loan();
+        l.setUser(user);
+        l.setAmount(amount);
+        l.setInterest(interest);
+        l.setMonths(months);
+        l.setEmi(emi);
+        l.setRemaining(amount);
+        l.setBranch(user != null && user.getBranch() != null ? user.getBranch() : "MAIN");
+        l.setStatus("PENDING");
+        l.setProductType("Personal Loan");
+        l.setInterestType("FIXED");
+        l.setDisbursedAmount(0.0);
+        l.setDisbursementDate(null);
+
+        Loan saved = repo.save(l);
+        if (saved.getAccountNumber() == null || saved.getAccountNumber().isBlank()) {
+            String accNum = String.format("LN%010d", Math.abs(saved.getLoanId()));
+            if (repo.findByAccountNumber(accNum).isPresent()) {
+                accNum = String.format("LN%08d%02d", Math.abs(saved.getLoanId()), (int) (Math.random() * 90 + 10));
+            }
+            saved.setAccountNumber(accNum);
+            saved = repo.save(saved);
+        }
+        // Do not generate amortization schedule or disburse funds until approved
+        return saved;
+    }
+
     public List<Loan> get(User user) {
         if (user == null) {
             return List.of();

@@ -236,7 +236,7 @@ public class LoanStatementPdfService {
             footer.add(new Chunk("This is a computer-generated statement and does not require a physical signature.", footerFont));
             footer.setAlignment(Element.ALIGN_CENTER);
             document.add(footer);
-
+            document.close();
             return out.toByteArray();
 
         } catch (DocumentException e) {

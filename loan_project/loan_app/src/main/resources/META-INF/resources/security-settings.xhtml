@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bank of India - Security Settings</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F7F9FC;
+            color: #172B4D;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 36px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .logo a {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0050A4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-orange { color: #E31B23; }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .nav-links a {
+            color: #172B4D;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-links a:hover { color: #ED7D16; }
+        .container {
+            max-width: 1200px;
+            margin: 24px auto 40px auto;
+            padding: 0 20px;
+        }
+        .settings-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: #FFFFFF;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid #E2E8F0;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .settings-nav a {
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+        .settings-nav a:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .settings-nav a.active {
+            background: #0050A4;
+            color: #FFFFFF;
+        }
+        .page-header {
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            color: #0050A4;
+            font-size: 26px;
+            margin: 0 0 6px 0;
+            font-weight: 800;
+        }
+        .page-header p {
+            color: #64748B;
+            font-size: 14px;
+            margin: 0;
+        }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 860px) {
+            .grid-layout { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0F172A;
+            margin: 0 0 16px 0;
+            border-bottom: 1px solid #F1F5F9;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px dashed #E2E8F0;
+            font-size: 13px;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #64748B; font-weight: 500; }
+        .info-value { color: #0F172A; font-weight: 600; text-align: right; }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-success { background: #ECFDF5; color: #065F46; }
+        .badge-info { background: #EFF6FF; color: #1E40AF; }
+        .badge-warning { background: #FEF3C7; color: #92400E; }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #CBD5E1;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #0F172A;
+            background: #FFFFFF;
+            transition: border-color 0.15s ease;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #0050A4;
+            box-shadow: 0 0 0 3px rgba(0,80,164,0.1);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+        }
+        .btn-primary { background: #0050A4; color: #FFFFFF; }
+        .btn-primary:hover { background: #003D7D; }
+        .alert {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-success { background: #ECFDF5; border-left: 4px solid #059669; color: #065F46; }
+        .alert-danger { background: #FEF2F2; border-left: 4px solid #DC2626; color: #991B1B; }
+        .password-rules {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 12px;
+            color: #64748B;
+            margin-top: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</h:head>
+<h:body>
+    <div class="navbar">
+        <div class="logo">
+            <a href="/dashboard">
+                <img src="/images/bank-logo.jpg" alt="Bank of India" height="34" style="border-radius:4px;"/>
+                Bank of <span class="brand-orange">India</span>
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="/settings-hub.xhtml" style="color:#0050A4; font-weight:700;">⚙️ Settings Hub</a>
+            <a href="/dashboard">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Settings Sub-Navigation -->
+        <div class="settings-nav">
+            <a href="/settings-hub.xhtml">⚙️ Hub</a>
+            <a href="/profile-settings.xhtml">👤 Profile Settings</a>
+            <a href="/security-settings.xhtml" class="active">🔒 Security Settings</a>
+            <a href="/notification-settings.xhtml">🔔 Notifications</a>
+            <a href="/loan-policy-settings.xhtml">🏛️ Loan Policy</a>
+            <a href="/role-permissions.xhtml">👥 Roles &amp; Permissions</a>
+            <a href="/audit-settings.xhtml">📋 Audit Logs</a>
+            <a href="/system-settings.xhtml">💻 System Status</a>
+        </div>
+
+        <div class="page-header">
+            <h1>Account Security &amp; Authentication Settings</h1>
+            <p>Manage your account credentials, view multi-factor authentication status, and enforce bank security standards.</p>
+        </div>
+
+        <!-- Success/Error Feedback -->
+        <h:panelGroup rendered="#{not empty securitySettingsBean.successMessage}">
+            <div class="alert alert-success">
+                <span>✅</span>
+                <strong>Success:</strong> <h:outputText value="#{securitySettingsBean.successMessage}"/>
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty securitySettingsBean.errorMessage}">
+            <div class="alert alert-danger">
+                <span>⚠️</span>
+                <strong>Security Alert:</strong> <h:outputText value="#{securitySettingsBean.errorMessage}"/>
+            </div>
+        </h:panelGroup>
+
+        <div class="grid-layout">
+            <!-- Left Column: Security & MFA Status -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🛡️</span> Security &amp; MFA Status
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Account Email</span>
+                    <span class="info-value"><h:outputText value="#{securitySettingsBean.email}"/></span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Two-Factor Authentication (MFA)</span>
+                    <span class="info-value">
+                        <h:panelGroup rendered="#{securitySettingsBean.mfaEnrolled}">
+                            <span class="badge badge-success">ACTIVE &amp; ENROLLED</span>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{!securitySettingsBean.mfaEnrolled}">
+                            <span class="badge badge-warning">ENROLLMENT REQUIRED</span>
+                        </h:panelGroup>
+                    </span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">MFA Method</span>
+                    <span class="info-value"><h:outputText value="#{securitySettingsBean.mfaType}"/> (Time-based One-Time Password / RFC 6238)</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">MFA Enforcement Policy</span>
+                    <span class="info-value">
+                        <span class="badge badge-info">MANDATORY (CANNOT BE DISABLED)</span>
+                    </span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Account Lock Protection</span>
+                    <span class="info-value">
+                        <h:panelGroup rendered="#{securitySettingsBean.accountNonLocked}">
+                            <span class="badge badge-success">NORMAL (NON-LOCKED)</span>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{!securitySettingsBean.accountNonLocked}">
+                            <span class="badge badge-warning">LOCKED (CONTACT ADMIN)</span>
+                        </h:panelGroup>
+                    </span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Failed Attempt Counter</span>
+                    <span class="info-value"><h:outputText value="#{securitySettingsBean.failedAttemptCount}"/> / 5 Max</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Session Protection</span>
+                    <span class="info-value" style="font-size:11px;"><h:outputText value="#{securitySettingsBean.sessionProtection}"/></span>
+                </div>
+
+                <div style="font-size:11px; color:#64748B; margin-top:20px; line-height:1.4;">
+                    🔒 <em>Bank of India security policy strictly mandates two-factor authentication (MFA/TOTP) for all customers and staff. In accordance with RBI guidelines, MFA cannot be disabled or bypassed.</em>
+                </div>
+            </div>
+
+            <!-- Right Column: Change Password Form -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🔑</span> Update Password
+                </div>
+
+                <h:form id="passwordForm">
+                    <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+
+                    <div class="form-group">
+                        <label class="form-label">Current Password <span style="color:#DC2626;">*</span></label>
+                        <h:inputSecret id="currentPass" value="#{securitySettingsBean.currentPassword}" class="form-control" autocomplete="current-password" required="true"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">New Password <span style="color:#DC2626;">*</span></label>
+                        <h:inputSecret id="newPass" value="#{securitySettingsBean.newPassword}" class="form-control" autocomplete="new-password" required="true"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password <span style="color:#DC2626;">*</span></label>
+                        <h:inputSecret id="confirmPass" value="#{securitySettingsBean.confirmPassword}" class="form-control" autocomplete="new-password" required="true"/>
+                    </div>
+
+                    <div class="password-rules">
+                        <strong>Password Requirements:</strong>
+                        <ul style="margin:6px 0 0 16px; padding:0;">
+                            <li>Between 8 and 64 characters in length</li>
+                            <li>At least 1 uppercase letter (A-Z) and 1 lowercase letter (a-z)</li>
+                            <li>At least 1 numerical digit (0-9)</li>
+                            <li>At least 1 special character (@$!%*?&amp;#^()_+-=)</li>
+                            <li>Must differ from your current password</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <h:commandButton value="Change Password" action="#{securitySettingsBean.changePassword}" class="btn btn-primary" style="width:100%;"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+    </div>
+</h:body>
+</html>

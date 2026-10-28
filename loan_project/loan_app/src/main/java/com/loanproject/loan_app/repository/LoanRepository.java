@@ -40,4 +40,11 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     @Query(value = "SELECT l FROM Loan l JOIN FETCH l.user u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%')) AND (:branch = 'ALL' OR l.branch = :branch)",
            countQuery = "SELECT COUNT(l) FROM Loan l JOIN l.user u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%')) AND (:branch = 'ALL' OR l.branch = :branch)")
     Page<Loan> searchByName(@Param("name") String name, @Param("branch") String branch, Pageable pageable);
+
+    // Pending applications query for loan approval workflow
+    @Query("SELECT l FROM Loan l JOIN FETCH l.user u WHERE l.status IN ('PENDING', 'SUBMITTED', 'IN_REVIEW', 'APPLIED') AND (:branch = 'ALL' OR l.branch = :branch) ORDER BY l.createdAt DESC")
+    List<Loan> findPendingLoansByBranch(@Param("branch") String branch);
+
+    @Query("SELECT l FROM Loan l JOIN FETCH l.user u WHERE l.loanId = :loanId")
+    Optional<Loan> findWithUserById(@Param("loanId") Long loanId);
 }

@@ -339,6 +339,11 @@
 
                 <!-- Quick Action Buttons -->
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <c:if test="${staffUser.role == 'ROLE_LOAN_OFFICER' || staffUser.role == 'ROLE_ADMIN'}">
+                        <a href="/loan-approval.xhtml" class="btn" style="width:auto; padding:10px 18px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#ED7D16; color:#FFFFFF;">
+                            <span>⚡  Loan Approval Workflow</span>
+                        </a>
+                    </c:if>
                     <a href="/loan-search" class="btn btn-secondary" style="width:auto; padding:10px 18px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
                         <span>🔍 Loan & Customer Search</span>
                     </a>
@@ -1313,6 +1318,24 @@
                 </div>
             </div>
 
+            <%-- Application Submitted / Success Message Banner --%>
+            <c:if test="${not empty successMessage or param.applied}">
+                <div class="alert alert-success" style="margin-bottom:24px; display:flex; align-items:center; gap:12px; border-left:4px solid #059669; background:#ECFDF5; color:#065F46; padding:16px 20px; border-radius:8px;">
+                    <span style="font-size:20px;">✅</span>
+                    <div>
+                        <strong>Application Status:</strong> <c:out value="${not empty successMessage ? successMessage : 'Your loan application has been submitted successfully and is currently under review by our loan officers.'}"/>
+                    </div>
+                </div>
+            </c:if>
+            <c:if test="${not empty errorMessage}">
+                <div class="alert alert-danger" style="margin-bottom:24px; display:flex; align-items:center; gap:12px; border-left:4px solid #DC2626; background:#FEF2F2; color:#991B1B; padding:16px 20px; border-radius:8px;">
+                    <span style="font-size:20px;">⚠️</span>
+                    <div>
+                        <c:out value="${errorMessage}"/>
+                    </div>
+                </div>
+            </c:if>
+
             <%-- Loan Selection Notification Banner --%>
             <c:if test="${param.selectLoan}">
                 <div class="alert alert-info" style="margin-bottom:24px; display:flex; align-items:center; gap:12px; border-left:4px solid #315B91;">
@@ -1450,6 +1473,12 @@
                                             </td>
                                             <td style="text-align:center;">
                                                 <c:choose>
+                                                    <c:when test="${l.status == 'PENDING' || l.status == 'SUBMITTED' || l.status == 'IN_REVIEW' || l.status == 'APPLIED'}">
+                                                        <span style="color:#D97706; font-size:12px; font-weight:600; display:inline-block; padding:4px 10px; background:#FEF3C7; border-radius:6px;">⏳ Under Review</span>
+                                                    </c:when>
+                                                    <c:when test="${l.status == 'REJECTED'}">
+                                                        <span style="color:#DC2626; font-size:12px; font-weight:600; display:inline-block; padding:4px 10px; background:#FEE2E2; border-radius:6px;">❌ Rejected</span>
+                                                    </c:when>
                                                     <c:when test="${l.remaining > 0}">
                                                         <a href="/payPage?loanId=${l.loanId}" 
                                                            class="btn" 

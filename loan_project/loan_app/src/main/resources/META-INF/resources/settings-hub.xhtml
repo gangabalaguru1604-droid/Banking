@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bank of India - Settings Hub</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F7F9FC;
+            color: #172B4D;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 36px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .logo a {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0050A4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-orange { color: #E31B23; }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .nav-links a {
+            color: #172B4D;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-links a:hover { color: #ED7D16; }
+        .hero {
+            background: linear-gradient(135deg, #0050A4 0%, #003366 100%);
+            color: #FFFFFF;
+            padding: 40px 36px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 12px rgba(0,80,164,0.15);
+        }
+        .hero h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 800;
+        }
+        .hero p {
+            margin: 0;
+            font-size: 15px;
+            opacity: 0.9;
+            max-width: 700px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1280px;
+            margin: 32px auto 60px auto;
+            padding: 0 24px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0F172A;
+            margin: 28px 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 24px;
+        }
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            text-decoration: none;
+            color: inherit;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            border-color: #0050A4;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .card-icon {
+            font-size: 32px;
+            line-height: 1;
+            padding: 10px;
+            background: #F1F5F9;
+            border-radius: 10px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0050A4;
+            margin: 12px 0 6px 0;
+        }
+        .card-desc {
+            font-size: 13px;
+            color: #64748B;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 14px;
+            border-top: 1px solid #F1F5F9;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0050A4;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .badge-all { background: #DCFCE7; color: #166534; }
+        .badge-staff { background: #E0F2FE; color: #0369A1; }
+        .badge-admin { background: #FEF3C7; color: #92400E; }
+    </style>
+</h:head>
+<h:body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="logo">
+            <a href="#{request.contextPath}/dashboard">
+                <span>🏦</span> Bank of India <span class="brand-orange">Smart Loan</span>
+            </a>
+        </div>
+        <nav class="nav-links">
+            <a href="#{request.contextPath}/dashboard">Dashboard</a>
+            <a href="#{request.contextPath}/loans">Loans</a>
+            <a href="#{request.contextPath}/loan-approval.xhtml">JSF Approvals</a>
+            <a href="#{request.contextPath}/settings-hub.xhtml" style="color: #0050A4;">⚙️ Settings</a>
+            <a href="#{request.contextPath}/logout" style="color: #E31B23;">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <!-- Hero Header -->
+        <div class="hero">
+            <h1>⚙️ Settings &amp; Administration Hub</h1>
+            <p>
+                Manage your user profile, security credentials, notification channels, loan underwriting policies, audit trails, and core banking system parameters.
+            </p>
+        </div>
+
+        <!-- Section 1: User & Security Settings (All Users) -->
+        <h2 class="section-title">👤 Personal &amp; Account Settings</h2>
+        <div class="grid">
+
+            <!-- Card 1: Profile Settings -->
+            <a href="#{request.contextPath}/profile-settings.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">👤</span>
+                        <span class="badge badge-all">ALL USERS</span>
+                    </div>
+                    <h3 class="card-title">Profile Settings</h3>
+                    <p class="card-desc">
+                        View and update your personal contact details, residential address, preferred communication channel, and review permanent KYC account attributes.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>Manage Profile</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+            <!-- Card 2: Security Settings -->
+            <a href="#{request.contextPath}/security-settings.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">🔒</span>
+                        <span class="badge badge-all">ALL USERS</span>
+                    </div>
+                    <h3 class="card-title">Security &amp; Password</h3>
+                    <p class="card-desc">
+                        Update your login password, inspect mandatory TOTP Multi-Factor Authentication status, and review active session security parameters.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>Security Controls</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+            <!-- Card 3: Notification Settings -->
+            <a href="#{request.contextPath}/notification-settings.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">🔔</span>
+                        <span class="badge badge-all">ALL USERS</span>
+                    </div>
+                    <h3 class="card-title">Notification Preferences</h3>
+                    <p class="card-desc">
+                        Configure delivery channels for loan application status alerts, EMI repayment reminders, security logins, and dispatch test notifications via Gmail API.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>Notification Channels</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Section 2: Underwriting & Operations (Loan Officers & Admins) -->
+        <h2 class="section-title" style="margin-top: 36px;">📋 Credit &amp; Underwriting Policies</h2>
+        <div class="grid">
+
+            <!-- Card 5: Loan Policy Settings -->
+            <a href="#{request.contextPath}/loan-policy-settings.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">📋</span>
+                        <span class="badge badge-staff">LOAN OFFICER &amp; ADMIN</span>
+                    </div>
+                    <h3 class="card-title">Loan Policy Settings</h3>
+                    <p class="card-desc">
+                        Inspect active interest rates, tenure brackets, minimum and maximum loan limits across Personal, Home, and Vehicle loans, with an interactive EMI simulator.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>View &amp; Configure Policies</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Section 3: Governance & Administration (Admin Only) -->
+        <h2 class="section-title" style="margin-top: 36px;">🛡️ Governance, Audit &amp; System Settings</h2>
+        <div class="grid">
+
+            <!-- Card 4: Role & Permissions -->
+            <a href="#{request.contextPath}/role-permissions.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">🛡️</span>
+                        <span class="badge badge-admin">ADMIN ONLY</span>
+                    </div>
+                    <h3 class="card-title">Role &amp; Permissions</h3>
+                    <p class="card-desc">
+                        Review the Role-Based Access Control (RBAC) permission matrix, inspect staff assignments, and manage bank staff role authorization under full audit logging.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>Manage Roles</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+            <!-- Card 6: Audit Settings -->
+            <a href="#{request.contextPath}/audit-settings.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">📜</span>
+                        <span class="badge badge-admin">ADMIN ONLY</span>
+                    </div>
+                    <h3 class="card-title">Audit Settings &amp; Logs</h3>
+                    <p class="card-desc">
+                        Search and filter immutable compliance logs, authentication history, MFA verification attempts, role updates, and inspect event records.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>Inspect Audit Logs</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+            <!-- Card 7: System Settings -->
+            <a href="#{request.contextPath}/system-settings.xhtml" class="card">
+                <div>
+                    <div class="card-header">
+                        <span class="card-icon">⚙️</span>
+                        <span class="badge badge-admin">ADMIN ONLY</span>
+                    </div>
+                    <h3 class="card-title">System Settings &amp; Diagnostics</h3>
+                    <p class="card-desc">
+                        Monitor JVM memory, system uptime, security framework compliance, and configure safe operational notices and announcement banners.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <span>System Diagnostics</span>
+                    <span>→</span>
+                </div>
+            </a>
+
+        </div>
+
+    </div>
+
+</h:body>
+</html>

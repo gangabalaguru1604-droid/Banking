@@ -40,6 +40,9 @@ public class Loan {
 
     private java.time.Instant createdAt = java.time.Instant.now();
 
+    @jakarta.persistence.Version
+    private Long version = 0L;
+
     @ManyToOne
     private User user;
 
@@ -148,6 +151,11 @@ public class Loan {
 	}
 
 	public double getDisbursedAmount() {
+		if ("PENDING".equalsIgnoreCase(status) || "SUBMITTED".equalsIgnoreCase(status)
+				|| "IN_REVIEW".equalsIgnoreCase(status) || "APPLIED".equalsIgnoreCase(status)
+				|| "REJECTED".equalsIgnoreCase(status)) {
+			return disbursedAmount;
+		}
 		return disbursedAmount > 0 ? disbursedAmount : amount;
 	}
 
@@ -156,6 +164,11 @@ public class Loan {
 	}
 
 	public java.time.LocalDate getDisbursementDate() {
+		if ("PENDING".equalsIgnoreCase(status) || "SUBMITTED".equalsIgnoreCase(status)
+				|| "IN_REVIEW".equalsIgnoreCase(status) || "APPLIED".equalsIgnoreCase(status)
+				|| "REJECTED".equalsIgnoreCase(status)) {
+			return disbursementDate;
+		}
 		if (disbursementDate != null) {
 			return disbursementDate;
 		}
@@ -167,5 +180,13 @@ public class Loan {
 
 	public void setDisbursementDate(java.time.LocalDate disbursementDate) {
 		this.disbursementDate = disbursementDate;
+	}
+
+	public Long getVersion() {
+		return version;
+	}
+
+	public void setVersion(Long version) {
+		this.version = version;
 	}
 }

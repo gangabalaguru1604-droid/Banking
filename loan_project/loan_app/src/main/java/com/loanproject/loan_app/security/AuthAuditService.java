@@ -183,4 +183,24 @@ public class AuthAuditService {
         record(username, request, "COLLECTION_RECORD_DENIED", "FAILURE", "UNAUTHORIZED_OR_INVALID",
                 "Collection recording denied for loanId: " + loanId + " - " + reason);
     }
+
+    public void logProfileUpdated(String username, HttpServletRequest request, String details) {
+        record(username, request, "PROFILE_UPDATED", "SUCCESS", null, "User profile updated: " + details);
+    }
+
+    public void logPasswordChanged(String username, HttpServletRequest request) {
+        record(username, request, "PASSWORD_CHANGED", "SUCCESS", null, "User updated their account password via Security Settings");
+    }
+
+    public void logNotificationPreferencesUpdated(String username, HttpServletRequest request, String details) {
+        record(username, request, "NOTIFICATION_PREFERENCES_UPDATED", "SUCCESS", null, "Notification preferences updated: " + details);
+    }
+
+    public void logLoanPolicyUpdated(String username, HttpServletRequest request, String details) {
+        record(username, request, "LOAN_POLICY_UPDATED", "SUCCESS", null, "Bank loan underwriting policy updated by admin: " + details);
+    }
+
+    public void logSystemSettingsUpdated(String username, HttpServletRequest request, String details) {
+        record(username, request, "SYSTEM_SETTINGS_UPDATED", "SUCCESS", null, "Operational system settings updated: " + details);
+    }
 }

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bank of India - Audit Settings &amp; Security Logs</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F7F9FC;
+            color: #172B4D;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 36px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .logo a {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0050A4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-orange { color: #E31B23; }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .nav-links a {
+            color: #172B4D;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-links a:hover { color: #ED7D16; }
+        .container {
+            max-width: 1350px;
+            margin: 24px auto 40px auto;
+            padding: 0 20px;
+        }
+        .settings-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: #FFFFFF;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid #E2E8F0;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .settings-nav a {
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+        .settings-nav a:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .settings-nav a.active {
+            background: #0050A4;
+            color: #FFFFFF;
+        }
+        .page-header {
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            color: #0050A4;
+            font-size: 26px;
+            margin: 0 0 6px 0;
+            font-weight: 800;
+        }
+        .page-header p {
+            color: #64748B;
+            font-size: 14px;
+            margin: 0;
+        }
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0F172A;
+            margin: 0 0 16px 0;
+            border-bottom: 1px solid #F1F5F9;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 20px;
+            background: #F8FAFC;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #E2E8F0;
+        }
+        .form-control {
+            padding: 9px 12px;
+            border: 1px solid #CBD5E1;
+            border-radius: 6px;
+            font-size: 13px;
+            background: #FFFFFF;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #0050A4;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+        }
+        .btn-primary { background: #0050A4; color: #FFFFFF; }
+        .btn-primary:hover { background: #003D7D; }
+        .btn-secondary { background: #E2E8F0; color: #334155; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        th {
+            background: #F8FAFC;
+            color: #475569;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:hover td { background: #F8FAFC; }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-success { background: #ECFDF5; color: #065F46; }
+        .badge-danger { background: #FEE2E2; color: #991B1B; }
+        .badge-info { background: #EFF6FF; color: #1E40AF; }
+        .badge-warning { background: #FEF3C7; color: #92400E; }
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid #E2E8F0;
+            margin-top: 14px;
+            font-size: 13px;
+            color: #64748B;
+        }
+        .detail-card {
+            background: #F8FAFC;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .detail-row {
+            display: flex;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+        .detail-label { width: 160px; font-weight: 600; color: #475569; }
+        .detail-val { flex: 1; color: #0F172A; }
+    </style>
+</h:head>
+<h:body>
+    <div class="navbar">
+        <div class="logo">
+            <a href="/dashboard">
+                <img src="/images/bank-logo.jpg" alt="Bank of India" height="34" style="border-radius:4px;"/>
+                Bank of <span class="brand-orange">India</span>
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="/settings-hub.xhtml" style="color:#0050A4; font-weight:700;">⚙️ Settings Hub</a>
+            <a href="/dashboard">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Settings Sub-Navigation -->
+        <div class="settings-nav">
+            <a href="/settings-hub.xhtml">⚙️ Hub</a>
+            <a href="/profile-settings.xhtml">👤 Profile Settings</a>
+            <a href="/security-settings.xhtml">🔒 Security Settings</a>
+            <a href="/notification-settings.xhtml">🔔 Notifications</a>
+            <a href="/loan-policy-settings.xhtml">🏛️ Loan Policy</a>
+            <a href="/role-permissions.xhtml">👥 Roles &amp; Permissions</a>
+            <a href="/audit-settings.xhtml" class="active">📋 Audit Logs</a>
+            <a href="/system-settings.xhtml">💻 System Status</a>
+        </div>
+
+        <div class="page-header">
+            <h1>Immutable Security &amp; Transaction Audit Trail</h1>
+            <p>Cryptographically sequenced, immutable audit logs tracking authentication, underwriting decisions, and administrative actions.</p>
+        </div>
+
+        <h:form id="auditForm">
+            <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+
+            <!-- Selected Log Details Drawer -->
+            <ui:fragment rendered="#{auditSettingsBean.selectedLog != null}">
+                <div class="detail-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #E2E8F0; padding-bottom:8px;">
+                        <span style="font-weight:700; color:#0050A4; font-size:15px;">
+                            🔍 Audit Event Inspection #<h:outputText value="#{auditSettingsBean.selectedLog.id}"/>
+                        </span>
+                        <h:commandButton value="✕ Close Details" action="#{auditSettingsBean.closeDetails}" class="btn btn-secondary btn-sm"/>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Timestamp:</span>
+                        <span class="detail-val"><strong><h:outputText value="#{auditSettingsBean.selectedLog.timestamp}"/></strong></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Event Type:</span>
+                        <span class="detail-val"><span class="badge badge-info"><h:outputText value="#{auditSettingsBean.selectedLog.eventType}"/></span></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">User / Principal:</span>
+                        <span class="detail-val"><h:outputText value="#{auditSettingsBean.selectedLog.username}"/></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Client IP Address:</span>
+                        <span class="detail-val"><h:outputText value="#{auditSettingsBean.selectedLog.clientIp}"/></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Outcome:</span>
+                        <span class="detail-val">
+                            <span class="badge #{auditSettingsBean.selectedLog.outcome == 'SUCCESS' ? 'badge-success' : 'badge-danger'}">
+                                <h:outputText value="#{auditSettingsBean.selectedLog.outcome}"/>
+                            </span>
+                        </span>
+                    </div>
+                    <ui:fragment rendered="#{not empty auditSettingsBean.selectedLog.failureCategory}">
+                        <div class="detail-row">
+                            <span class="detail-label">Failure Category:</span>
+                            <span class="detail-val" style="color:#DC2626;"><h:outputText value="#{auditSettingsBean.selectedLog.failureCategory}"/></span>
+                        </div>
+                    </ui:fragment>
+                    <div class="detail-row">
+                        <span class="detail-label">Event Details:</span>
+                        <span class="detail-val"><h:outputText value="#{auditSettingsBean.selectedLog.details}"/></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Client User-Agent:</span>
+                        <span class="detail-val" style="font-family:monospace; font-size:11px; color:#64748B;"><h:outputText value="#{auditSettingsBean.selectedLog.userAgent}"/></span>
+                    </div>
+                </div>
+            </ui:fragment>
+
+            <!-- Card: Audit Log Filter & Table -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📋</span> Security Audit Log Trail
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-bar">
+                    <div style="flex:1; min-width:220px;">
+                        <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Search Keyword</label>
+                        <h:inputText value="#{auditSettingsBean.keyword}" class="form-control" placeholder="Search user, IP, or details..."/>
+                    </div>
+
+                    <div style="width:220px;">
+                        <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Event Type</label>
+                        <h:selectOneMenu value="#{auditSettingsBean.selectedEventType}" class="form-control">
+                            <f:selectItems value="#{auditSettingsBean.eventTypes}" var="t" itemValue="#{t}" itemLabel="#{t}"/>
+                        </h:selectOneMenu>
+                    </div>
+
+                    <div style="width:140px;">
+                        <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Outcome</label>
+                        <h:selectOneMenu value="#{auditSettingsBean.selectedOutcome}" class="form-control">
+                            <f:selectItem itemValue="ALL" itemLabel="All Outcomes"/>
+                            <f:selectItem itemValue="SUCCESS" itemLabel="Success Only"/>
+                            <f:selectItem itemValue="FAILURE" itemLabel="Failure Only"/>
+                        </h:selectOneMenu>
+                    </div>
+
+                    <div>
+                        <h:commandButton value="Apply Filter" action="#{auditSettingsBean.applyFilters}" class="btn btn-primary"/>
+                    </div>
+                    <div>
+                        <h:commandButton value="Reset" action="#{auditSettingsBean.resetFilters}" class="btn btn-secondary"/>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Event Type</th>
+                                <th>User / Actor</th>
+                                <th>Client IP</th>
+                                <th>Outcome</th>
+                                <th>Details</th>
+                                <th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ui:fragment rendered="#{empty auditSettingsBean.pagedLogs}">
+                                <tr>
+                                    <td colspan="7" style="text-align:center; padding:30px; color:#64748B;">
+                                        No audit records match the selected filter criteria.
+                                    </td>
+                                </tr>
+                            </ui:fragment>
+                            <ui:repeat value="#{auditSettingsBean.pagedLogs}" var="entry">
+                                <tr>
+                                    <td style="font-family:monospace; font-size:11px; color:#475569; white-space:nowrap;">
+                                        <h:outputText value="#{entry.timestamp}"/>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info"><h:outputText value="#{entry.eventType}"/></span>
+                                    </td>
+                                    <td><strong><h:outputText value="#{entry.username}"/></strong></td>
+                                    <td style="font-family:monospace; font-size:12px;"><h:outputText value="#{entry.clientIp}"/></td>
+                                    <td>
+                                        <span class="badge #{entry.outcome == 'SUCCESS' ? 'badge-success' : 'badge-danger'}">
+                                            <h:outputText value="#{entry.outcome}"/>
+                                        </span>
+                                    </td>
+                                    <td style="max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;">
+                                        <h:outputText value="#{entry.details}"/>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <h:commandButton value="Inspect" action="#{auditSettingsBean.selectLog(entry.id)}" class="btn btn-secondary btn-sm"/>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination-bar">
+                    <div>
+                        Showing Page <h:outputText value="#{auditSettingsBean.page + 1}"/> of <h:outputText value="#{auditSettingsBean.totalPages}"/>
+                        (<h:outputText value="#{auditSettingsBean.totalRecords}"/> total audit events)
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <h:commandButton value="⏮ First" action="#{auditSettingsBean.firstPage}" class="btn btn-secondary btn-sm" disabled="#{auditSettingsBean.page == 0}"/>
+                        <h:commandButton value="◀ Previous" action="#{auditSettingsBean.prevPage}" class="btn btn-secondary btn-sm" disabled="#{auditSettingsBean.page == 0}"/>
+                        <h:commandButton value="Next ▶" action="#{auditSettingsBean.nextPage}" class="btn btn-secondary btn-sm" disabled="#{auditSettingsBean.page >= auditSettingsBean.totalPages - 1}"/>
+                    </div>
+                </div>
+            </div>
+        </h:form>
+    </div>
+</h:body>
+</html>

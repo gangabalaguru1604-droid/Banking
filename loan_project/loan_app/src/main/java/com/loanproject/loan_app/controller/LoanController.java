@@ -234,7 +234,8 @@ public class LoanController {
                         @RequestParam(value = "amount") double amount,
                         @RequestParam(value = "interest", required = false) Double clientInterest,
                         @RequestParam(value = "months", required = false) Integer clientMonths,
-                        @RequestParam(value = "customerEmail", required = false) String customerEmail) {
+                        @RequestParam(value = "customerEmail", required = false) String customerEmail,
+                        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         User u = getAuthenticatedUser(s);
 
         // RBAC check
@@ -271,6 +272,13 @@ public class LoanController {
             targetUser = u;
             effectiveInterest = service.getDefaultInterestRate();
             effectiveTenure = service.getDefaultTenureMonths();
+            Loan pending = service.applyPendingLoan(targetUser, amount, effectiveInterest, effectiveTenure);
+            if (redirectAttributes != null) {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "Your loan application for ₹" + String.format("%,.2f", amount)
+                        + " has been submitted successfully and is pending review by the loan officer.");
+            }
+            return "redirect:/dashboard";
         } else {
             throw new AccessDeniedException("Unauthorized to originate loans.");
         }
@@ -299,8 +307,15 @@ public class LoanController {
             if (u.getRole() == AppRole.ROLE_CUSTOMER && !l.getUser().getId().equals(u.getId())) {
                 throw new AccessDeniedException("Forbidden: You cannot access payment information for another customer's loan.");
             }
+
+            if (!"ACTIVE".equalsIgnoreCase(l.getStatus())) {
+                m.addAttribute("errorMessage", "Loan application #" + l.getLoanId() + " is currently " + l.getStatus() + ". Payments can only be made on ACTIVE loans.");
+                return "redirect:/dashboard";
+            }
         } else {
-            java.util.List<Loan> userLoans = service.get(u);
+            java.util.List<Loan> userLoans = service.get(u).stream()
+                    .filter(loan -> "ACTIVE".equalsIgnoreCase(loan.getStatus()))
+                    .toList();
             if (userLoans.isEmpty()) {
                 m.addAttribute("errorMessage", "No active loans found for repayment.");
                 l = null;
@@ -337,6 +352,10 @@ public class LoanController {
         // Enforce Object-Level Authorization: Customer cannot pay another customer's loan
         if (u.getRole() == AppRole.ROLE_CUSTOMER && !l.getUser().getId().equals(u.getId())) {
             throw new AccessDeniedException("Forbidden: You cannot process payments for another customer's loan.");
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(l.getStatus())) {
+            throw new IllegalStateException("Payments can only be processed on ACTIVE loans. Current loan status is: " + l.getStatus());
         }
 
         service.pay(loanId, amount, paymentMode, transactionReference);

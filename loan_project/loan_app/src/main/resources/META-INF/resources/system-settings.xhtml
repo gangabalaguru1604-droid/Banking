@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bank of India - System Settings &amp; Diagnostics</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F7F9FC;
+            color: #172B4D;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 36px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .logo a {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0050A4;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-orange { color: #E31B23; }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .nav-links a {
+            color: #172B4D;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-links a:hover { color: #ED7D16; }
+        .container {
+            max-width: 1280px;
+            margin: 24px auto 40px auto;
+            padding: 0 20px;
+        }
+        .settings-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: #FFFFFF;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid #E2E8F0;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .settings-nav a {
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+        .settings-nav a:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .settings-nav a.active {
+            background: #0050A4;
+            color: #FFFFFF;
+        }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 900px) {
+            .grid-layout { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0050A4;
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #F1F5F9;
+            padding-bottom: 10px;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #F8FAFC;
+            font-size: 13px;
+        }
+        .metric-label {
+            color: #64748B;
+            font-weight: 600;
+        }
+        .metric-val {
+            color: #0F172A;
+            font-weight: 700;
+            font-family: 'Consolas', monospace;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .badge-success { background: #DCFCE7; color: #166534; }
+        .badge-info { background: #E0F2FE; color: #0369A1; }
+        .badge-warning { background: #FEF3C7; color: #92400E; }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #CBD5E1;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #0F172A;
+            background: #FFFFFF;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #0050A4;
+            box-shadow: 0 0 0 3px rgba(0,80,164,0.1);
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .checkbox-row label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1E293B;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #0050A4;
+            color: #FFFFFF;
+            border: none;
+            padding: 11px 22px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .btn-primary:hover { background-color: #003B7A; }
+        .btn-secondary {
+            background-color: #F1F5F9;
+            color: #334155;
+            border: 1px solid #CBD5E1;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+        .btn-secondary:hover { background-color: #E2E8F0; }
+        .alert-success {
+            background: #DEF7EC;
+            color: #03543F;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #BCF0DA;
+            margin-bottom: 18px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .alert-error {
+            background: #FDE8E8;
+            color: #9B1C1C;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #FBD5D5;
+            margin-bottom: 18px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .security-callout {
+            background: #F0FDF4;
+            border-left: 4px solid #16A34A;
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 12px;
+            color: #166534;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+        .meter-bar {
+            background: #E2E8F0;
+            border-radius: 6px;
+            height: 10px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .meter-fill {
+            background: #0050A4;
+            height: 100%;
+            border-radius: 6px;
+        }
+    </style>
+</h:head>
+<h:body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="logo">
+            <a href="#{request.contextPath}/dashboard">
+                <span>🏦</span> Bank of India <span class="brand-orange">Smart Loan</span>
+            </a>
+        </div>
+        <nav class="nav-links">
+            <a href="#{request.contextPath}/dashboard">Dashboard</a>
+            <a href="#{request.contextPath}/loans">Loans</a>
+            <a href="#{request.contextPath}/loan-approval.xhtml">JSF Approvals</a>
+            <a href="#{request.contextPath}/settings-hub.xhtml" style="color: #0050A4;">⚙️ Settings</a>
+            <a href="#{request.contextPath}/logout" style="color: #E31B23;">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <!-- Settings Sub-Navigation -->
+        <nav class="settings-nav">
+            <a href="#{request.contextPath}/profile-settings.xhtml">👤 Profile Settings</a>
+            <a href="#{request.contextPath}/security-settings.xhtml">🔒 Security Settings</a>
+            <a href="#{request.contextPath}/notification-settings.xhtml">🔔 Notification Settings</a>
+            <a href="#{request.contextPath}/role-permissions.xhtml">🛡️ Role &amp; Permissions</a>
+            <a href="#{request.contextPath}/loan-policy-settings.xhtml">📋 Loan Policy Settings</a>
+            <a href="#{request.contextPath}/audit-settings.xhtml">📜 Audit Settings</a>
+            <a href="#{request.contextPath}/system-settings.xhtml" class="active">⚙️ System Settings</a>
+        </nav>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h1 style="margin: 0; font-size: 24px; color: #0050A4;">⚙️ System Settings &amp; Diagnostics</h1>
+                <p style="margin: 4px 0 0 0; color: #64748B; font-size: 14px;">
+                    Application runtime diagnostics, architecture compliance, and safe operational controls.
+                </p>
+            </div>
+            <div>
+                <h:form style="display: inline;">
+                    <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+                    <h:commandButton value="🔄 Refresh Diagnostics" action="#{systemSettingsBean.refreshDiagnostics}" styleClass="btn-secondary" />
+                </h:form>
+                <span class="badge badge-warning">ADMIN ONLY</span>
+            </div>
+        </div>
+
+        <!-- Feedback Messages -->
+        <h:panelGroup rendered="#{not empty systemSettingsBean.successMessage}">
+            <div class="alert-success">
+                ✅ #{systemSettingsBean.successMessage}
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty systemSettingsBean.errorMessage}">
+            <div class="alert-error">
+                ⚠️ #{systemSettingsBean.errorMessage}
+            </div>
+        </h:panelGroup>
+
+        <!-- Masking & Security Notice -->
+        <div class="security-callout">
+            🔒 <strong>Zero Secret Exposure Policy:</strong> In compliance with RBI cyber security guidelines and OWASP Top 10, sensitive infrastructure parameters (database credentials, Gmail OAuth tokens, encryption keys, and internal IP topology) are strictly hidden and not inspectable or mutable via this interface.
+        </div>
+
+        <div class="grid-layout">
+
+            <!-- Column 1: Application & JVM Diagnostics -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">🖥️ Application &amp; Server Diagnostics</h2>
+                    <div class="metric-row">
+                        <span class="metric-label">Application Name:</span>
+                        <span class="metric-val">#{systemSettingsBean.appName}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Build Version:</span>
+                        <span class="metric-val">
+                            <span class="badge badge-info">#{systemSettingsBean.appVersion}</span>
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Spring Active Profile:</span>
+                        <span class="metric-val">#{systemSettingsBean.activeProfile}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Bound Server Port:</span>
+                        <span class="metric-val">#{systemSettingsBean.serverPort}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Server Timestamp:</span>
+                        <span class="metric-val">#{systemSettingsBean.serverTimestamp}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">JVM Uptime:</span>
+                        <span class="metric-val">#{systemSettingsBean.jvmUptime}</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">⚡ JVM Memory &amp; Platform Health</h2>
+                    <div class="metric-row">
+                        <span class="metric-label">Java Runtime:</span>
+                        <span class="metric-val">#{systemSettingsBean.javaVersion}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Operating System:</span>
+                        <span class="metric-val">#{systemSettingsBean.osName}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Heap Memory (Free / Total):</span>
+                        <span class="metric-val">#{systemSettingsBean.freeMemoryMb} MB / #{systemSettingsBean.totalMemoryMb} MB</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Heap Maximum Limit:</span>
+                        <span class="metric-val">#{systemSettingsBean.maxMemoryMb} MB</span>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <span style="font-size: 12px; color: #64748B;">Memory Usage Indicator:</span>
+                        <div class="meter-bar">
+                            <div class="meter-fill" style="width: #{(systemSettingsBean.totalMemoryMb - systemSettingsBean.freeMemoryMb) * 100 / systemSettingsBean.totalMemoryMb}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">🛡️ Security Framework &amp; Compliance</h2>
+                    <div class="metric-row">
+                        <span class="metric-label">Security Framework:</span>
+                        <span class="metric-val">#{systemSettingsBean.securityFramework}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">MFA Implementation:</span>
+                        <span class="metric-val">
+                            <span class="badge badge-success">MANDATORY TOTP</span>
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">CSRF Protection:</span>
+                        <span class="metric-val">
+                            <span class="badge badge-success">ACTIVE</span>
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Concurrency Strategy:</span>
+                        <span class="metric-val">#{systemSettingsBean.lockingStrategy}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Session Protection:</span>
+                        <span class="metric-val">#{systemSettingsBean.sessionPolicy}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Safe Operational Controls -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">🎛️ Operational Preferences &amp; Notices</h2>
+                    <p style="font-size: 13px; color: #64748B; margin-top: 0; margin-bottom: 20px;">
+                        Adjust customer-facing system announcements and maintenance broadcast settings safely.
+                    </p>
+
+                    <h:form id="systemSettingsForm">
+                        <input type="hidden" name="#{_csrf.parameterName}" value="#{_csrf.token}" />
+
+                        <div class="form-group">
+                            <label for="announcement">Global Customer Announcement Banner</label>
+                            <h:inputTextarea id="announcement" value="#{systemSettingsBean.announcementBanner}" rows="3" styleClass="form-control" />
+                            <small style="color: #64748B; font-size: 11px;">Shown at top of customer portal dashboard (max 300 characters).</small>
+                        </div>
+
+                        <div class="checkbox-row" style="margin-top: 16px;">
+                            <h:selectBooleanCheckbox id="maintToggle" value="#{systemSettingsBean.maintenanceNoticeEnabled}" />
+                            <label for="systemSettingsForm:maintToggle">Enable Scheduled Maintenance Warning</label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="maintNotice">Maintenance Notice Details</label>
+                            <h:inputTextarea id="maintNotice" value="#{systemSettingsBean.maintenanceNotice}" rows="2" styleClass="form-control" />
+                        </div>
+
+                        <div class="checkbox-row">
+                            <h:selectBooleanCheckbox id="emailToggle" value="#{systemSettingsBean.emailDispatchActive}" />
+                            <label for="systemSettingsForm:emailToggle">Outbound Notification Dispatch Subsystem Active</label>
+                        </div>
+
+                        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end;">
+                            <h:commandButton value="💾 Save Operational Preferences"
+                                             action="#{systemSettingsBean.saveOperationalSettings}"
+                                             styleClass="btn-primary" />
+                        </div>
+                    </h:form>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">📦 Infrastructure &amp; Integration Architecture</h2>
+                    <div class="metric-row">
+                        <span class="metric-label">Servlet Container:</span>
+                        <span class="metric-val">Embedded Apache Tomcat 10.1.x</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Persistence Provider:</span>
+                        <span class="metric-val">Hibernate ORM 6.x / Spring Data JPA</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Faces Implementation:</span>
+                        <span class="metric-val">JoinFaces 5.x / Jakarta Faces 4.0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Notification Engine:</span>
+                        <span class="metric-val">Spring JavaMail / Google Cloud OAuth2</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Audit Store:</span>
+                        <span class="metric-val">Immutable Spring Data JPA Audit Table</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</h:body>
+</html>

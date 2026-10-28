@@ -126,6 +126,10 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE loan ADD COLUMN IF NOT EXISTS interest_type VARCHAR(20) DEFAULT 'FIXED'");
             jdbcTemplate.execute("ALTER TABLE loan ADD COLUMN IF NOT EXISTS disbursed_amount NUMERIC(15,2) NULL");
             jdbcTemplate.execute("ALTER TABLE loan ADD COLUMN IF NOT EXISTS disbursement_date DATE NULL");
+            jdbcTemplate.execute("ALTER TABLE loan ADD COLUMN IF NOT EXISTS version BIGINT DEFAULT 0");
+            try {
+                jdbcTemplate.execute("UPDATE loan SET version = 0 WHERE version IS NULL");
+            } catch (Exception ignored) {}
 
             // Ensure users_seq sequence exists and is in sync with max(id)
             jdbcTemplate.execute("CREATE SEQUENCE IF NOT EXISTS users_seq START WITH 50 INCREMENT BY 50");

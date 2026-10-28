@@ -88,6 +88,7 @@ public class SecurityConfig {
                     "/js/**",
                     "/images/**",
                     "/favicon.ico",
+                    "/jakarta.faces.resource/**",
                     "/error"
                 ).permitAll()
 
@@ -100,8 +101,15 @@ public class SecurityConfig {
                 // Repayment processing: Strictly restricted to Customers paying self (All staff roles are restricted)
                 .requestMatchers("/payPage", "/pay").hasRole("CUSTOMER")
 
-                // Staff Loan Processing (Approve / Reject): Loan Officers, Admins
-                .requestMatchers("/staff/loans/approve", "/staff/loans/reject").hasAnyRole("LOAN_OFFICER", "ADMIN")
+                // Staff Loan Processing (Approve / Reject): Loan Officers, Admins (both REST/form and JSF)
+                .requestMatchers(
+                    "/staff/loans/approve",
+                    "/staff/loans/reject",
+                    "/loan-approval.xhtml",
+                    "/loan-approval.jsf",
+                    "/loan-approval",
+                    "/loan-approval/**"
+                ).hasAnyRole("LOAN_OFFICER", "ADMIN")
 
                 // Staff Collections Recording: Collections Agents, Collections Managers, Admins
                 .requestMatchers("/staff/collections/record").hasAnyRole("COLLECTIONS_AGENT", "COLLECTIONS_MANAGER", "ADMIN")
@@ -111,6 +119,26 @@ public class SecurityConfig {
 
                 // Dashboard
                 .requestMatchers("/dashboard").authenticated()
+
+                // JSF Settings - Admin Only (Role & Permissions, Audit Settings, System Settings)
+                .requestMatchers(
+                    "/role-permissions.xhtml", "/role-permissions.jsf", "/role-permissions",
+                    "/audit-settings.xhtml", "/audit-settings.jsf", "/audit-settings",
+                    "/system-settings.xhtml", "/system-settings.jsf", "/system-settings"
+                ).hasRole("ADMIN")
+
+                // JSF Settings - Loan Underwriting Policy (Loan Officers and Admin)
+                .requestMatchers(
+                    "/loan-policy-settings.xhtml", "/loan-policy-settings.jsf", "/loan-policy-settings"
+                ).hasAnyRole("LOAN_OFFICER", "ADMIN")
+
+                // JSF Settings - All Authenticated Users (Profile, Security, Notifications, Hub)
+                .requestMatchers(
+                    "/profile-settings.xhtml", "/profile-settings.jsf", "/profile-settings",
+                    "/security-settings.xhtml", "/security-settings.jsf", "/security-settings",
+                    "/notification-settings.xhtml", "/notification-settings.jsf", "/notification-settings",
+                    "/settings-hub.xhtml", "/settings-hub.jsf", "/settings-hub"
+                ).authenticated()
 
                 // All other endpoints require authentication
                 .anyRequest().authenticated()

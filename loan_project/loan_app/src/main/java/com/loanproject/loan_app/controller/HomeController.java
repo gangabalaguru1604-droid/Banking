@@ -65,8 +65,18 @@ public class HomeController {
         this.auditService = auditService;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.default-view:jsp}")
+    private String defaultView = "jsp";
+
     @GetMapping("/")
     public String home() {
+        if ("jsp".equalsIgnoreCase(defaultView)) {
+            return "index";
+        }
+        org.springframework.core.io.Resource indexHtml = new org.springframework.core.io.ClassPathResource("static/index.html");
+        if (indexHtml.exists()) {
+            return "forward:/index.html";
+        }
         return "index";
     }
 
