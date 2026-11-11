@@ -128,6 +128,7 @@ public class DataInitializer implements CommandLineRunner {
     private void ensureCustomerAccount(String name, String email, String password, String branch) {
         String cleanEmail = email.trim().toLowerCase();
         Optional<User> optionalCustomer = userRepository.findByEmail(cleanEmail);
+        String seedSecret = "JBSWY3DPEHPK3PXP";
 
         if (optionalCustomer.isEmpty()) {
             User customer = new User();
@@ -142,19 +143,17 @@ public class DataInitializer implements CommandLineRunner {
             customer.setCustomerId("CUST" + String.format("%04d", (int)(Math.random() * 9000) + 1000));
             customer.setPhoneNumber("9876543210");
             customer.setMfaType("TOTP");
-            customer.setMfaEnrolled(false);
-            customer.setMfaSecret(null);
+            customer.setMfaSecret(encryptionService.encrypt(seedSecret));
+            customer.setMfaEnrolled(true);
 
             userRepository.save(customer);
-            log.info("Initialized default customer account: {} ready for Authenticator QR code scan", cleanEmail);
+            log.info("Initialized default customer account: {} ready for login with OTP", cleanEmail);
         } else {
             User customer = optionalCustomer.get();
-            // Reset customer to unenrolled TOTP so user can scan QR code with Google Authenticator
-            customer.setMfaType("TOTP");
-            customer.setMfaEnrolled(false);
-            customer.setMfaSecret(null);
+            healSecretIfNeeded(customer, seedSecret, "TOTP");
+            customer.setMfaEnrolled(true);
             userRepository.save(customer);
-            log.info("Reset customer account {} to unenrolled TOTP so user can scan Authenticator QR code", cleanEmail);
+            log.info("Verified default customer account: {} enrolled for login", cleanEmail);
         }
     }
 
