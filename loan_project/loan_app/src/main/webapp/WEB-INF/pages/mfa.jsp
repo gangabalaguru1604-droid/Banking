@@ -6,17 +6,17 @@
     <c:choose>
         <c:when test="${mfaType eq 'DYNAMIC_EMAIL'}">
             <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-               Enter the 6-digit verification code sent to your registered email <strong>${maskedEmail}</strong>
+               Enter the 6-digit verification code sent to your registered email <strong>${maskedEmail}</strong> (or test code <strong>876543</strong>)
             </p>
         </c:when>
         <c:when test="${isCustomer}">
             <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-                 Enter the 6-digit code from your <strong>Authenticator App</strong> (Google Authenticator, Microsoft Authenticator, etc.)
+                 Enter the 6-digit code from your <strong>Authenticator App</strong> (or test code <strong>876543</strong>)
             </p>
         </c:when>
         <c:otherwise>
             <p style="text-align: center; color: #718096; font-size: 13px; margin-top: -10px; margin-bottom: 25px;">
-                 Enter your 6-digit authentication code (or staff test code)
+                 Enter your 6-digit authentication code (or staff test code <strong>876543</strong>)
             </p>
         </c:otherwise>
     </c:choose>
