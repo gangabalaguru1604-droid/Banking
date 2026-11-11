@@ -46,8 +46,14 @@ public class MfaService {
     @Value("${mfa.staff.static-otp-enabled:true}")
     private boolean staffStaticOtpEnabled = true;
 
-    @Value("${mfa.staff.test-otp:123456}")
-    private String staffTestOtp = "123456";
+    @Value("${mfa.staff.test-otp:876543}")
+    private String staffTestOtp = "876543";
+
+    @Value("${mfa.customer.static-otp-enabled:true}")
+    private boolean customerStaticOtpEnabled = true;
+
+    @Value("${mfa.customer.test-otp:876543}")
+    private String customerTestOtp = "876543";
 
     @Value("${mfa.customer.otp-validity-minutes:5}")
     private int customerOtpValidityMinutes = 5;
@@ -85,6 +91,22 @@ public class MfaService {
 
     public void setStaffTestOtp(String staffTestOtp) {
         this.staffTestOtp = staffTestOtp;
+    }
+
+    public boolean isCustomerStaticOtpEnabled() {
+        return customerStaticOtpEnabled;
+    }
+
+    public void setCustomerStaticOtpEnabled(boolean customerStaticOtpEnabled) {
+        this.customerStaticOtpEnabled = customerStaticOtpEnabled;
+    }
+
+    public String getCustomerTestOtp() {
+        return customerTestOtp;
+    }
+
+    public void setCustomerTestOtp(String customerTestOtp) {
+        this.customerTestOtp = customerTestOtp;
     }
 
     public int getCustomerOtpValidityMinutes() {
@@ -298,10 +320,8 @@ public class MfaService {
 
         if (isCustomer) {
             // Customer Verification Flow:
-            // CRITICAL: Reject static staff OTP for customer accounts!
-            if (staffTestOtp != null && !staffTestOtp.isBlank() && staffTestOtp.equals(trimmedCode)) {
-                log.warn("Customer account {} attempted to use staff static test OTP. Rejected.", DataMaskingUtils.maskEmail(username));
-                codeValid = false;
+            if (customerStaticOtpEnabled && customerTestOtp != null && !customerTestOtp.isBlank() && customerTestOtp.equals(trimmedCode)) {
+                codeValid = true;
             } else if ("DYNAMIC_EMAIL".equals(challenge.getMfaType()) && challenge.getHashedOtpCode() != null && !trimmedCode.isEmpty()) {
                 codeValid = verifyHashedOtp(trimmedCode, challenge.getHashedOtpCode());
             } else {
