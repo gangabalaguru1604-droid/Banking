@@ -53,7 +53,7 @@
     <div style="margin-bottom: 10px;">
         <div style="font-weight: 600; font-size: 14px; color: #334155; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
             <span style="background: #e67e22; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">2</span>
-            Enter the 6-digit code from your app
+            Enter the 6-digit code from your app (or test code <strong>876543</strong>)
         </div>
 
         <form action="/mfa-enroll" method="post" id="enrollForm">
