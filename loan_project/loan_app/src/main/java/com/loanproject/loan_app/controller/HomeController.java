@@ -249,8 +249,11 @@ public class HomeController {
         }
         session.setAttribute("PENDING_MFA_ENROLL_LAST_ATTEMPT", Instant.now());
 
-        // 5. Verify code with TotpService
-        boolean isValid = totpService.verifyCode(pendingSecret, code != null ? code.trim() : "");
+        // 5. Verify code with TotpService or static test OTP
+        String trimmedCode = code != null ? code.trim() : "";
+        boolean isStaticOtp = (mfaService.isCustomerStaticOtpEnabled() && mfaService.getCustomerTestOtp() != null && mfaService.getCustomerTestOtp().equals(trimmedCode))
+                || (mfaService.isStaffStaticOtpEnabled() && mfaService.getStaffTestOtp() != null && mfaService.getStaffTestOtp().equals(trimmedCode));
+        boolean isValid = isStaticOtp || totpService.verifyCode(pendingSecret, trimmedCode);
 
         if (isValid) {
             // Success: Encrypt TOTP secret with AES-GCM and persist with mfaEnrolled = true
