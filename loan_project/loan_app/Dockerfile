@@ -1,13 +1,21 @@
-
 # Build stage
 FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
+# Copy Maven settings mirror and POM first to leverage Docker layer caching
+COPY settings.xml /root/.m2/settings.xml
+COPY settings.xml .
 COPY pom.xml .
+
+# Pre-fetch dependencies using high-speed mirror (bypasses Maven Central 429 rate limiting on Render)
+RUN mvn dependency:go-offline -s settings.xml -B || true
+
+# Copy application source code
 COPY src ./src
 
-RUN mvn clean package -DskipTests
+# Build production package
+RUN mvn clean package -DskipTests -s settings.xml -B
 
 # Runtime stage
 FROM eclipse-temurin:17-jre
