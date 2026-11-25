@@ -149,6 +149,23 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session
                 .sessionFixation().migrateSession()
+                .invalidSessionUrl("/login?expired=true")
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    org.springframework.security.core.Authentication auth =
+                            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    boolean isAnonymous = (auth == null || !auth.isAuthenticated()
+                            || auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken);
+                    if (isAnonymous) {
+                        response.sendRedirect(request.getContextPath() + "/login?expired=true");
+                    } else {
+                        response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                        request.setAttribute(jakarta.servlet.RequestDispatcher.ERROR_STATUS_CODE, jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                        request.setAttribute(jakarta.servlet.RequestDispatcher.ERROR_MESSAGE, "Access Denied: You do not have permission to view this resource.");
+                        request.getRequestDispatcher("/error").forward(request, response);
+                    }
+                })
             )
             .headers(headers -> headers
                 .cacheControl(org.springframework.security.config.Customizer.withDefaults())
