@@ -40,7 +40,7 @@ public class LoanStatementPdfService {
 
     private static final Logger log = LoggerFactory.getLogger(LoanStatementPdfService.class);
 
-    // Bank of India Institutional Color Palette
+    // Bank of Sorim Institutional Color Palette
     private static final Color COLOR_BOI_BLUE = new Color(36, 68, 107);     // #24446B
     private static final Color COLOR_BOI_ORANGE = new Color(237, 125, 22);   // #ED7D16
     private static final Color COLOR_DARK = new Color(23, 43, 77);           // #172B4D
@@ -69,7 +69,7 @@ public class LoanStatementPdfService {
             Font footerFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, COLOR_MUTED);
 
             // 1. BANK HEADER
-            Paragraph bankName = new Paragraph("BANK OF INDIA", bankTitleFont);
+            Paragraph bankName = new Paragraph("BANK OF SORIM", bankTitleFont);
             bankName.setAlignment(Element.ALIGN_CENTER);
             document.add(bankName);
 
@@ -297,7 +297,7 @@ public class LoanStatementPdfService {
             // 6. DISCLAIMER & INSTITUTIONAL FOOTER
             Paragraph footer = new Paragraph();
             footer.setSpacingBefore(12);
-            footer.add(new Chunk("CONFIDENTIAL BANKING DOCUMENT — Bank of India Institutional Records.\n", footerFont));
+            footer.add(new Chunk("CONFIDENTIAL BANKING DOCUMENT — Bank of Sorim Institutional Records.\n", footerFont));
             footer.add(new Chunk("This is a computer-generated statement and does not require a physical signature.", footerFont));
             footer.setAlignment(Element.ALIGN_CENTER);
             document.add(footer);

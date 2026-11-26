@@ -50,7 +50,7 @@ public class PasswordResetService {
     @org.springframework.beans.factory.annotation.Value("${app.base-url:}")
     private String configuredBaseUrl;
 
-    @org.springframework.beans.factory.annotation.Value("${reminder.mail.from:security@bankofindia.co.in}")
+    @org.springframework.beans.factory.annotation.Value("${reminder.mail.from:security@bankofsorim.com}")
     private String fromEmail;
 
     // In-memory rate limiting: email/ip -> count and window
@@ -148,12 +148,12 @@ public class PasswordResetService {
             }
 
             String resetUrl = baseUrl + "/reset-password?token=" + rawToken;
-            String subject = "Bank of India - Password Reset Request";
+            String subject = "Bank of Sorim - Password Reset Request";
             String recipientEmail = user.getEmail().trim();
             String userName = (user.getName() != null && !user.getName().isBlank()) ? user.getName() : "Customer";
 
             String htmlBody = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                    + "<h2 style='color: #1a365d; margin-top: 0;'>Bank of India Loan Portal</h2>"
+                    + "<h2 style='color: #1a365d; margin-top: 0;'>Bank of Sorim Loan Portal</h2>"
                     + "<p>Dear " + userName + ",</p>"
                     + "<p>We received a request to reset the password for your account.</p>"
                     + "<p>Click the button below to choose a new password. This link is valid for <strong>15 minutes</strong> and can only be used once:</p>"
@@ -180,7 +180,7 @@ public class PasswordResetService {
             if (mailSender != null) {
                 jakarta.mail.internet.MimeMessage message = mailSender.createMimeMessage();
                 org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
-                helper.setFrom((fromEmail != null && !fromEmail.isBlank()) ? fromEmail : "security@bankofindia.co.in");
+                helper.setFrom((fromEmail != null && !fromEmail.isBlank()) ? fromEmail : "security@bankofsorim.com");
                 helper.setTo(recipientEmail);
                 helper.setSubject(subject);
                 helper.setText(htmlBody, true);

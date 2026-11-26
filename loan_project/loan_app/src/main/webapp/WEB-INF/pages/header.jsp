@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bank of India - Loan Management System</title>
+    <title>Bank of Sorim - Loan Management System</title>
     <!-- CSRF Tokens for AJAX -->
     <meta name="_csrf" content="${_csrf.token}"/>
     <meta name="_csrf_header" content="${_csrf.headerName}"/>
@@ -351,8 +351,8 @@
 <div class="navbar">
     <div class="logo">
         <a href="/">
-            <img src="/images/bank-logo.jpg" alt="Bank of India" class="bank-logo"/>
-            Bank of <span class="brand-orange">India</span>
+            <img src="/images/bank-logo.jpg" alt="Bank of Sorim" class="bank-logo"/>
+            Bank of <span class="brand-orange">Sorim</span>
         </a>
     </div>
 

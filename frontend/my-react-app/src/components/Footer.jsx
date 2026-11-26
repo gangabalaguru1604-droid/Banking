@@ -10,13 +10,13 @@ export default function Footer() {
           <div className="footer-logo">
             <img 
               src="/images/bank-logo.jpg" 
-              alt="Bank of India" 
+              alt="Bank of Sorim" 
               className="footer-logo-img" 
             />
-            <span className="logo-text">Bank of <span className="brand-accent">India</span></span>
+            <span className="logo-text">Bank of <span className="brand-accent">Sorim</span></span>
           </div>
           <p className="footer-desc">
-            Bank of India Smart Loan Management System delivering transparent, compliant, and streamlined lending services across India.
+            Bank of Sorim Smart Loan Management System delivering transparent, compliant, and streamlined lending services across India.
           </p>
           <div className="footer-helpdesk">
             <span className="helpdesk-icon" aria-hidden="true">📞</span>
@@ -66,7 +66,7 @@ export default function Footer() {
 
       <div className="footer-bottom">
         <div className="footer-bottom-inner">
-          <p>© {new Date().getFullYear()} Bank of India. All rights reserved. Smart Loan Management System.</p>
+          <p>© {new Date().getFullYear()} Bank of Sorim. All rights reserved. Smart Loan Management System.</p>
           <div className="bottom-links">
             <a href={getBackendUrl('/jsp-home')}>Legacy JSP View</a>
             <span>•</span>

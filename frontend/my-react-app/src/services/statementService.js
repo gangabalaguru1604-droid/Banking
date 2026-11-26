@@ -4,7 +4,7 @@
 import { getBackendUrl } from '../utils/apiConfig';
 
 /**
- * Downloads the official Bank of India Loan Statement PDF for a given loan ID.
+ * Downloads the official Bank of Sorim Loan Statement PDF for a given loan ID.
  * Handles the response as a binary Blob and triggers client-side file save.
  * If backend returns an error (JSON or HTTP error), extracts and throws a meaningful error.
  *

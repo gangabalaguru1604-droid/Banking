@@ -27,7 +27,7 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
     @Autowired(required = false)
     private com.loanproject.loan_app.services.GmailRestService gmailRestService;
 
-    @Value("${mfa.customer.mail.from:${reminder.mail.from:security@bankofindia.co.in}}")
+    @Value("${mfa.customer.mail.from:${reminder.mail.from:security@bankofsorim.com}}")
     private String fromEmail;
 
     @Value("${mfa.customer.mail.simulate:false}")
@@ -82,7 +82,7 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
         // Deliver via real Gmail REST API or JavaMailSender ONLY if credentials are fully provided and not simulated
         if (hasValidMailCredentials() && !simulateMail) {
             String htmlContent = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                    + "<h2 style='color: #1a365d; margin-top: 0;'>Bank of India Loan Portal</h2>"
+                    + "<h2 style='color: #1a365d; margin-top: 0;'>Bank of Sorim Loan Portal</h2>"
                     + "<p>Dear " + (customer.getName() != null ? customer.getName() : "Customer") + ",</p>"
                     + "<p>Your one-time dynamic verification code for signing in is:</p>"
                     + "<div style='font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2b6cb0; background: #edf2f7; padding: 12px 24px; text-align: center; border-radius: 6px; margin: 20px 0;'>"
@@ -91,12 +91,12 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
                     + "<p style='color: #718096; font-size: 13px;'>This code is valid for 5 minutes and can only be used once. Never share this code with anyone, including bank staff.</p>"
                     + "<p style='color: #718096; font-size: 13px;'>If you did not request this login attempt, please secure your account immediately.</p>"
                     + "<hr style='border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
-                    + "<p style='color: #a0aec0; font-size: 11px; text-align: center;'>Bank of India Loan Management System</p>"
+                    + "<p style='color: #a0aec0; font-size: 11px; text-align: center;'>Bank of Sorim Loan Management System</p>"
                     + "</div>";
 
             // Prioritize Gmail API over HTTPS (super fast, immune to cloud SMTP port blocking)
             if (gmailRestService != null && gmailRestService.isConfigured()) {
-                String messageId = gmailRestService.sendEmail(recipientEmail, "Bank of India - Authentication Verification Code", htmlContent);
+                String messageId = gmailRestService.sendEmail(recipientEmail, "Bank of Sorim - Authentication Verification Code", htmlContent);
                 if (messageId != null) {
                     log.info("Dispatched dynamic MFA OTP via Gmail API over HTTPS to recipient {}", maskedEmail);
                     return true;
@@ -108,10 +108,10 @@ public class DefaultCustomerOtpDeliveryService implements CustomerOtpDeliverySer
                 try {
                     MimeMessage message = mailSender.createMimeMessage();
                     MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-                    String from = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail : "security@bankofindia.co.in";
+                    String from = (fromEmail != null && !fromEmail.isBlank()) ? fromEmail : "security@bankofsorim.com";
                     helper.setFrom(from);
                     helper.setTo(recipientEmail);
-                    helper.setSubject("Bank of India - Authentication Verification Code");
+                    helper.setSubject("Bank of Sorim - Authentication Verification Code");
                     helper.setText(htmlContent, true);
                     mailSender.send(message);
 

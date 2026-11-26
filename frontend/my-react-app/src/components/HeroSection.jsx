@@ -22,7 +22,7 @@ export default function HeroSection({ authState }) {
         <div className="hero-content animate-slide-up">
           <div className="hero-badge">
             <span className="badge-dot"></span>
-            Bank of India • Official Digital Loan Portal
+            Bank of Sorim • Official Digital Loan Portal
           </div>
 
           <h1 className="hero-title">
@@ -30,7 +30,7 @@ export default function HeroSection({ authState }) {
           </h1>
 
           <p className="hero-subtitle">
-            Apply loans, calculate EMI, and track payments easily with Bank of India. Experience institutional-grade security, instant pre-approvals, and complete repayment clarity.
+            Apply loans, calculate EMI, and track payments easily with Bank of Sorim. Experience institutional-grade security, instant pre-approvals, and complete repayment clarity.
           </p>
 
           <div className="hero-actions">

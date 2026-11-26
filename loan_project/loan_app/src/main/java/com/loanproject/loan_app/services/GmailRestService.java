@@ -49,7 +49,7 @@ public class GmailRestService {
     @Value("${gmail.api.refresh-token:}")
     private String refreshToken;
 
-    @Value("${gmail.api.sender-email:${reminder.mail.from:security@bankofindia.co.in}}")
+    @Value("${gmail.api.sender-email:${reminder.mail.from:security@bankofsorim.com}}")
     private String senderEmail;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -71,7 +71,7 @@ public class GmailRestService {
     }
 
     public String getSenderEmail() {
-        return (senderEmail != null && !senderEmail.isBlank()) ? senderEmail.trim() : "security@bankofindia.co.in";
+        return (senderEmail != null && !senderEmail.isBlank()) ? senderEmail.trim() : "security@bankofsorim.com";
     }
 
     /**
@@ -102,7 +102,7 @@ public class GmailRestService {
             Session session = Session.getDefaultInstance(props, null);
             MimeMessage mimeMessage = new MimeMessage(session);
 
-            mimeMessage.setFrom(new InternetAddress(getSenderEmail(), "Bank of India Loan Management"));
+            mimeMessage.setFrom(new InternetAddress(getSenderEmail(), "Bank of Sorim Loan Management"));
             mimeMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(toEmail.trim()));
             mimeMessage.setSubject(subject, "UTF-8");
             mimeMessage.setContent(htmlBody, "text/html; charset=UTF-8");

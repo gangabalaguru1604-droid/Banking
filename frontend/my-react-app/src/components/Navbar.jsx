@@ -47,10 +47,10 @@ export default function Navbar({ authState }) {
           <a href="/" className="logo-link">
             <img 
               src="/images/bank-logo.jpg" 
-              alt="Bank of India Logo" 
+              alt="Bank of Sorim Logo" 
               className="logo-img"
             />
-            <span className="logo-text">Bank of <span className="brand-accent">India</span></span>
+            <span className="logo-text">Bank of <span className="brand-accent">Sorim</span></span>
           </a>
         </div>
 
